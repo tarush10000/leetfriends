@@ -2,9 +2,9 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
-import Dashboard from "@/components/Dashboard";
+import SettingsPage from "@/components/SettingsPage";
 
-export default async function DashboardPage() {
+export default async function Settings() {
     const session = await getServerSession(authOptions);
     if (!session) redirect("/login");
 
@@ -13,7 +13,6 @@ export default async function DashboardPage() {
     const users = db.collection("users");
     const user = await users.findOne({ email: session.user?.email });
 
-    // If user is not onboarded, redirect to onboarding
     if (!user?.onboarded) {
         redirect("/onboard");
     }
@@ -25,8 +24,9 @@ export default async function DashboardPage() {
         displayName: user.displayName || user.handle || "",
         initialStats: user.initialStats || { easy: 0, medium: 0, hard: 0, total: 0 },
         currentStats: user.currentStats || { easy: 0, medium: 0, hard: 0, total: 0 },
-        onboarded: user.onboarded || false
+        onboardedAt: user.onboardedAt || new Date().toISOString(),
+        joinedParties: user.joinedParties || []
     };
 
-    return <Dashboard user={session.user} userProfile={userProfile} />;
+    return <SettingsPage initialProfile={userProfile} />;
 }

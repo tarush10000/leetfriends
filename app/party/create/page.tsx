@@ -2,9 +2,9 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
-import Dashboard from "@/components/Dashboard";
+import PartyCreateForm from "@/components/PartyCreateForm";
 
-export default async function DashboardPage() {
+export default async function CreatePartyPage() {
     const session = await getServerSession(authOptions);
     if (!session) redirect("/login");
 
@@ -13,7 +13,6 @@ export default async function DashboardPage() {
     const users = db.collection("users");
     const user = await users.findOne({ email: session.user?.email });
 
-    // If user is not onboarded, redirect to onboarding
     if (!user?.onboarded) {
         redirect("/onboard");
     }
@@ -24,9 +23,8 @@ export default async function DashboardPage() {
         leetcodeUsername: user.leetcodeUsername || "",
         displayName: user.displayName || user.handle || "",
         initialStats: user.initialStats || { easy: 0, medium: 0, hard: 0, total: 0 },
-        currentStats: user.currentStats || { easy: 0, medium: 0, hard: 0, total: 0 },
-        onboarded: user.onboarded || false
+        currentStats: user.currentStats || { easy: 0, medium: 0, hard: 0, total: 0 }
     };
 
-    return <Dashboard user={session.user} userProfile={userProfile} />;
+    return <PartyCreateForm userProfile={userProfile} />;
 }
