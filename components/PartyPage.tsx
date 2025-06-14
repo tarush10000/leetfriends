@@ -3,12 +3,12 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-    ArrowLeft, 
-    Users, 
-    Trophy, 
-    Copy, 
-    Crown, 
+import {
+    ArrowLeft,
+    Users,
+    Trophy,
+    Copy,
+    Crown,
     Calendar,
     Target,
     LogOut,
@@ -129,10 +129,10 @@ export default function PartyPage({ code }: { code: string }) {
 
     const updateMyStats = async () => {
         if (!party || !currentUserEmail) return;
-        
+
         // Find current user's LeetCode username
         const currentMember = party.members.find(m => m.email === currentUserEmail);
-        
+
         if (!currentMember) {
             toast.error("Could not find your member information");
             return;
@@ -145,9 +145,9 @@ export default function PartyPage({ code }: { code: string }) {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     username: currentMember.leetcodeUsername,
-                    partyCode: code 
+                    partyCode: code
                 }),
             });
 
@@ -243,7 +243,7 @@ export default function PartyPage({ code }: { code: string }) {
                                 <p className="text-sm text-slate-400">Party Code: {party.code}</p>
                             </div>
                         </div>
-                        
+
                         <div className="flex items-center space-x-3">
                             <Button
                                 variant="outline"
@@ -389,18 +389,16 @@ export default function PartyPage({ code }: { code: string }) {
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.05 }}
-                                        className={`p-6 border-b border-slate-700/30 last:border-b-0 hover:bg-slate-700/20 transition-colors ${
-                                            index === 0 ? 'bg-gradient-to-r from-yellow-500/5 to-orange-500/5' : ''
-                                        }`}
+                                        className={`p-6 border-b border-slate-700/30 last:border-b-0 hover:bg-slate-700/20 transition-colors ${index === 0 ? 'bg-gradient-to-r from-yellow-500/5 to-orange-500/5' : ''
+                                            }`}
                                     >
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center space-x-4">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                                                    index === 0 ? 'bg-yellow-500 text-black' :
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${index === 0 ? 'bg-yellow-500 text-black' :
                                                     index === 1 ? 'bg-slate-400 text-black' :
-                                                    index === 2 ? 'bg-amber-600 text-white' :
-                                                    'bg-slate-700 text-slate-300'
-                                                }`}>
+                                                        index === 2 ? 'bg-amber-600 text-white' :
+                                                            'bg-slate-700 text-slate-300'
+                                                    }`}>
                                                     {index === 0 ? '🏆' : index + 1}
                                                 </div>
                                                 <div>
@@ -421,7 +419,7 @@ export default function PartyPage({ code }: { code: string }) {
                                                     </p>
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="text-right">
                                                 <p className="text-2xl font-bold text-white mb-1">
                                                     {member.stats.total}
@@ -490,7 +488,15 @@ export default function PartyPage({ code }: { code: string }) {
                                     </Button>
                                 </div>
                                 <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
-                                    <GameMaster partyCode={code} isOwner={isOwner} />
+                                    <GameMaster
+                                        partyCode={code}
+                                        isOwner={isOwner}
+                                        currentUserEmail={currentUserEmail || undefined}
+                                        currentUserName={(() => {
+                                            const currentMember = party?.members.find(m => m.email === currentUserEmail);
+                                            return currentMember?.displayName || currentMember?.handle || undefined;
+                                        })()}
+                                    />
                                 </div>
                             </motion.div>
                         </motion.div>
