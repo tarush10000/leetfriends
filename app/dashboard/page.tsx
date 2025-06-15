@@ -1,3 +1,4 @@
+// app/dashboard/page.tsx - Enhanced with proper auth flow
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
@@ -6,15 +7,30 @@ import Dashboard from "@/components/Dashboard";
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
-    if (!session) redirect("/login");
+    
+    // If not authenticated, redirect to login
+    if (!session) {
+        redirect("/login");
+    }
 
-    // Check if user is onboarded
     const db = await connectToDatabase();
     const users = db.collection("users");
     const user = await users.findOne({ email: session.user?.email });
 
-    // If user is not onboarded, redirect to onboarding
-    if (!user?.onboarded) {
+    // If user doesn't exist in database, create basic record and redirect to onboarding
+    if (!user) {
+        await users.insertOne({
+            email: session.user?.email,
+            name: session.user?.name,
+            image: session.user?.image,
+            createdAt: new Date(),
+            onboarded: false,
+        });
+        redirect("/onboard");
+    }
+
+    // If user exists but is not onboarded, redirect to onboarding
+    if (!user.onboarded) {
         redirect("/onboard");
     }
 
