@@ -1,41 +1,44 @@
+// app/api/leetcode/stats/route.ts - Enhanced with rate limiting
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
+import { statsUpdateLimiter, RATE_LIMITS } from "@/lib/rateLimit";
 
-// LeetCode GraphQL API endpoint
-const LEETCODE_API_URL = "https://leetcode.com/graphql";
-
-interface LeetCodeStats {
-    easy: number;
-    medium: number;
-    hard: number;
-    total: number;
-}
-
-async function fetchLeetCodeStats(username: string): Promise<LeetCodeStats | null> {
+// Existing fetchLeetCodeStats function (keep as is)
+async function fetchLeetCodeStats(username: string) {
     try {
-        const response = await fetch(LEETCODE_API_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            },
-            body: JSON.stringify({
-                query: `
-                    query getUserProfile($username: String!) {
-                        matchedUser(username: $username) {
-                            submitStats {
-                                acSubmissionNum {
-                                    difficulty
-                                    count
-                                }
-                            }
+        const query = `
+            query userProblemsSolved($username: String!) {
+                allQuestionsCount {
+                    difficulty
+                    count
+                }
+                matchedUser(username: $username) {
+                    problemsSolvedBeatsStats {
+                        difficulty
+                        percentage
+                    }
+                    submitStatsGlobal {
+                        acSubmissionNum {
+                            difficulty
+                            count
                         }
                     }
-                `,
+                }
+            }
+        `;
+
+        const response = await fetch('https://leetcode.com/graphql', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Referer': 'https://leetcode.com'
+            },
+            body: JSON.stringify({
+                query,
                 variables: { username }
-            }),
+            })
         });
 
         if (!response.ok) {
@@ -43,86 +46,101 @@ async function fetchLeetCodeStats(username: string): Promise<LeetCodeStats | nul
         }
 
         const data = await response.json();
-
-        if (!data.data?.matchedUser?.submitStats?.acSubmissionNum) {
+        
+        if (data.errors) {
+            console.error('GraphQL errors for user', username, ':', data.errors);
             return null;
         }
 
-        const stats = data.data.matchedUser.submitStats.acSubmissionNum;
-        const easy = stats.find((s: any) => s.difficulty === "Easy")?.count || 0;
-        const medium = stats.find((s: any) => s.difficulty === "Medium")?.count || 0;
-        const hard = stats.find((s: any) => s.difficulty === "Hard")?.count || 0;
+        if (!data.data?.matchedUser) {
+            console.error('User not found:', username);
+            return null;
+        }
+
+        const stats = data.data.matchedUser.submitStatsGlobal.acSubmissionNum;
+        const easy = stats.find((stat: any) => stat.difficulty === 'Easy')?.count || 0;
+        const medium = stats.find((stat: any) => stat.difficulty === 'Medium')?.count || 0;
+        const hard = stats.find((stat: any) => stat.difficulty === 'Hard')?.count || 0;
 
         return {
             easy,
             medium,
             hard,
-            total: easy + medium + hard,
+            total: easy + medium + hard
         };
+
     } catch (error) {
         console.error(`Error fetching LeetCode stats for ${username}:`, error);
         return null;
     }
 }
 
-// Update a single user's stats
+// Update individual user stats
 export async function POST(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session) {
+        if (!session?.user?.email) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         const { username, partyCode } = await req.json();
 
-        if (!username) {
-            return NextResponse.json({ error: "Username is required" }, { status: 400 });
-        }
-
-        // Fetch stats from LeetCode
-        const stats = await fetchLeetCodeStats(username);
-        if (!stats) {
-            return NextResponse.json({ error: "Failed to fetch LeetCode stats. Please check the username." }, { status: 400 });
+        if (!username || !partyCode) {
+            return NextResponse.json({ error: "Username and party code are required" }, { status: 400 });
         }
 
         const db = await connectToDatabase();
         const parties = db.collection("parties");
 
-        // Update stats in party if partyCode is provided
-        if (partyCode) {
-            await parties.updateOne(
-                {
-                    code: partyCode,
-                    "members.email": session.user?.email
-                },
-                {
-                    $set: {
-                        "members.$.stats": {
-                            ...stats,
-                            lastUpdated: new Date(),
-                        },
-                    },
-                }
-            );
+        // Verify user is in the party
+        const party = await parties.findOne({ 
+            code: partyCode.toUpperCase(),
+            "members.email": session.user.email
+        });
+
+        if (!party) {
+            return NextResponse.json({ error: "Party not found or you're not a member" }, { status: 404 });
         }
+
+        // Fetch new stats
+        const stats = await fetchLeetCodeStats(username);
+        if (!stats) {
+            return NextResponse.json({ error: "Failed to fetch LeetCode stats. Please check your username." }, { status: 400 });
+        }
+
+        // Update user's stats in the party
+        await parties.updateOne(
+            {
+                code: partyCode.toUpperCase(),
+                "members.email": session.user.email
+            },
+            {
+                $set: {
+                    "members.$.stats": {
+                        ...stats,
+                        lastUpdated: new Date(),
+                    },
+                },
+            }
+        );
 
         return NextResponse.json({
             success: true,
-            stats,
-            message: "Stats updated successfully!"
+            message: "Your stats have been updated!",
+            stats
         });
 
     } catch (error) {
-        console.error("Error updating LeetCode stats:", error);
+        console.error("Error updating individual LeetCode stats:", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
 
-// Update all party members' stats
+// Update all party members' stats (Owner only with rate limiting)
 export async function PUT(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session) {
+        if (!session?.user?.email) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -135,10 +153,32 @@ export async function PUT(req: NextRequest) {
         const db = await connectToDatabase();
         const parties = db.collection("parties");
 
-        // Get the party
-        const party = await parties.findOne({ code: partyCode });
+        // Get the party and verify ownership
+        const party = await parties.findOne({ code: partyCode.toUpperCase() });
         if (!party) {
             return NextResponse.json({ error: "Party not found" }, { status: 404 });
+        }
+
+        // Check if user is the owner
+        const member = party.members.find((m: any) => m.email === session.user?.email);
+        if (!member || !member.isOwner) {
+            return NextResponse.json({ error: "Only the party owner can update all stats" }, { status: 403 });
+        }
+
+        // Rate limiting check
+        const rateLimitKey = `stats-update:${partyCode}`;
+        const rateLimit = statsUpdateLimiter.checkLimit(
+            rateLimitKey,
+            RATE_LIMITS.STATS_UPDATE.maxRequests,
+            RATE_LIMITS.STATS_UPDATE.windowMs
+        );
+
+        if (!rateLimit.allowed) {
+            const waitTime = Math.ceil((rateLimit.resetTime - Date.now()) / 1000);
+            return NextResponse.json({ 
+                error: `Rate limit exceeded. Please wait ${waitTime} seconds before updating stats again.`,
+                waitTime
+            }, { status: 429 });
         }
 
         // Update each member's stats
@@ -147,7 +187,7 @@ export async function PUT(req: NextRequest) {
             if (stats) {
                 await parties.updateOne(
                     {
-                        code: partyCode,
+                        code: partyCode.toUpperCase(),
                         "members.email": member.email
                     },
                     {
@@ -170,7 +210,9 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({
             success: true,
             message: `Updated ${successCount}/${results.length} members' stats`,
-            results
+            results,
+            remainingRequests: rateLimit.remainingRequests,
+            resetTime: rateLimit.resetTime
         });
 
     } catch (error) {

@@ -1,7 +1,6 @@
-// lib/auth.ts - Updated NextAuth configuration for Google OAuth
-
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import GitHubProvider from "next-auth/providers/github";
 import { connectToDatabase } from "./mongodb";
 
 export const authOptions: NextAuthOptions = {
@@ -9,6 +8,10 @@ export const authOptions: NextAuthOptions = {
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        }),
+        GitHubProvider({
+            clientId: process.env.GITHUB_CLIENT_ID!,
+            clientSecret: process.env.GITHUB_CLIENT_SECRET!,
         }),
     ],
 
@@ -32,6 +35,20 @@ export const authOptions: NextAuthOptions = {
                         createdAt: new Date(),
                         onboarded: false,
                     });
+                } else {
+                    // Update last login and provider info if needed
+                    await users.updateOne(
+                        { email: user.email },
+                        {
+                            $set: {
+                                lastLogin: new Date(),
+                                // Update image if it's different
+                                ...(user.image && user.image !== existingUser.image && { image: user.image }),
+                                // Update name if it's different
+                                ...(user.name && user.name !== existingUser.name && { name: user.name }),
+                            }
+                        }
+                    );
                 }
 
                 return true;
