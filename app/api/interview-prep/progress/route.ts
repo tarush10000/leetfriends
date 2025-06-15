@@ -270,7 +270,7 @@ async function calculateCurrentStreak(dailyActivities: any, userEmail: string): 
 
         let streak = 0;
         const today = new Date();
-        let checkDate = new Date(today);
+        const checkDate = new Date(today);
         
         // Allow grace period - if no activity today, start from yesterday
         const todayStr = formatDate(today);

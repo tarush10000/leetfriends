@@ -108,6 +108,7 @@ Make it engaging and well-structured!`;
                 timeLimit: timerMinutes || 30,
                 topics: [topic || 'Algorithm']
             };
+            console.warn("Failed to parse JSON from response, using fallback structure", parseError);
         }
 
         // Create challenge in database

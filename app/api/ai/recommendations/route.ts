@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
                 leetcodeStats = body.leetcodeStats;
             }
         } catch (e) {
-            // Ignore parsing error, use default leetcodeStats
+            console.error("Failed to parse request body for fallback stats:", e);
         }
         return NextResponse.json({ 
             error: "Failed to generate recommendations",

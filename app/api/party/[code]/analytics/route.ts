@@ -94,7 +94,7 @@ async function calculateLeetCodeStreak(leetcodeUsername: string): Promise<{
             };
         }
 
-        let checkDate = new Date(startDate);
+        const checkDate = new Date(startDate);
         for (let i = 0; i < submissionDates.length; i++) {
             const checkDateStr = checkDate.toISOString().split('T')[0];
             
@@ -223,7 +223,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ code
                             streakData
                         };
                     } catch (error) {
-                        console.log(`Failed to get submission data for ${member.leetcodeUsername}`);
+                        console.log(`Failed to get submission data for ${member.leetcodeUsername}`, error);
                         return {
                             username: member.leetcodeUsername,
                             submissionDates: [],

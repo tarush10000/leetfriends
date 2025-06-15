@@ -215,7 +215,7 @@ async function calculateLeetCodeStreak(leetcodeUsername: string): Promise<{
         }
 
         // Count consecutive days backwards from start date
-        let checkDate = new Date(startDate);
+        const checkDate = new Date(startDate);
         for (let i = 0; i < submissionDates.length; i++) {
             const checkDateStr = checkDate.toISOString().split('T')[0];
             
