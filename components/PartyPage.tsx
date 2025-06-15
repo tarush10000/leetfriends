@@ -28,12 +28,16 @@ import {
     Save,
     AlertTriangle,
     Menu,
-    MoreVertical
+    MoreVertical,
+    BarChart3,
+    Brain,
+    Building
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import GameMaster from "@/components/GameMaster";
+import PartyAnalytics from '@/components/PartyAnalytics';
 
 interface PartyMember {
     email: string;
@@ -68,6 +72,29 @@ interface Party {
     createdBy: string;
     members: PartyMember[];
 }
+
+type TabType = 'overview' | 'analytics' | 'gamemaster';
+
+const tabs = [
+    {
+        id: 'overview',
+        name: 'Overview',
+        icon: Users,
+        description: 'Members and leaderboard'
+    },
+    {
+        id: 'analytics',
+        name: 'Analytics',
+        icon: BarChart3,
+        description: 'Party statistics and trends'
+    },
+    {
+        id: 'gamemaster',
+        name: 'Game Master',
+        icon: Brain,
+        description: 'AI challenges and competitions'
+    }
+];
 
 interface UserProfileProps {
     member: PartyMember;
@@ -436,7 +463,6 @@ function PartySettingsModal({ party, onClose, onUpdate }: PartySettingsProps) {
 // Mobile Action Menu Component
 interface MobileMenuProps {
     isOwner: boolean;
-    onGameMaster: () => void;
     onUpdateAllStats: () => void;
     onRefresh: () => void;
     onShare: () => void;
@@ -444,18 +470,19 @@ interface MobileMenuProps {
     onLeave: () => void;
     updatingStats: boolean;
     refreshing: boolean;
+    statsUpdateCooldown: number;
 }
 
 function MobileActionMenu({ 
     isOwner, 
-    onGameMaster, 
     onUpdateAllStats, 
     onRefresh, 
     onShare, 
     onSettings, 
     onLeave,
     updatingStats,
-    refreshing
+    refreshing,
+    statsUpdateCooldown
 }: MobileMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
 
@@ -487,28 +514,17 @@ function MobileActionMenu({
                             className="absolute right-0 top-full mt-2 w-48 bg-slate-800 rounded-lg border border-slate-700 shadow-xl z-50"
                         >
                             <div className="py-2">
-                                <button
-                                    onClick={() => {
-                                        onGameMaster();
-                                        setIsOpen(false);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-white hover:bg-slate-700 flex items-center"
-                                >
-                                    <Sparkles className="w-4 h-4 mr-2 text-purple-400" />
-                                    Game Master
-                                </button>
-                                
                                 {isOwner && (
                                     <button
                                         onClick={() => {
                                             onUpdateAllStats();
                                             setIsOpen(false);
                                         }}
-                                        disabled={updatingStats}
+                                        disabled={updatingStats || statsUpdateCooldown > 0}
                                         className="w-full px-4 py-2 text-left text-sm text-white hover:bg-slate-700 flex items-center disabled:opacity-50"
                                     >
                                         <RefreshCw className={`w-4 h-4 mr-2 ${updatingStats ? 'animate-spin' : ''}`} />
-                                        Update All Stats
+                                        {statsUpdateCooldown > 0 ? `${statsUpdateCooldown}s` : 'Update All Stats'}
                                     </button>
                                 )}
                                 
@@ -575,11 +591,11 @@ export default function PartyPage({ code }: { code: string }) {
     const [refreshing, setRefreshing] = useState(false);
     const [updatingStats, setUpdatingStats] = useState(false);
     const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
-    const [showGameMaster, setShowGameMaster] = useState(false);
     const [selectedMember, setSelectedMember] = useState<PartyMember | null>(null);
     const [showSettings, setShowSettings] = useState(false);
     const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
     const [statsUpdateCooldown, setStatsUpdateCooldown] = useState(0);
+    const [activeTab, setActiveTab] = useState<TabType>('overview');
     const router = useRouter();
     const { data: session } = useSession();
 
@@ -628,7 +644,6 @@ export default function PartyPage({ code }: { code: string }) {
     };
 
     const updateAllStats = async () => {
-        // Rate limiting check - only for owners
         if (statsUpdateCooldown > 0) {
             toast.error(`Please wait ${statsUpdateCooldown} seconds before updating stats again`);
             return;
@@ -652,50 +667,12 @@ export default function PartyPage({ code }: { code: string }) {
                 await fetchParty();
             } else {
                 toast.error(data.error || "Failed to update stats");
-                setStatsUpdateCooldown(0); // Reset cooldown on error
+                setStatsUpdateCooldown(0);
             }
         } catch (error) {
             console.error("Error updating stats:", error);
             toast.error("Failed to update stats");
-            setStatsUpdateCooldown(0); // Reset cooldown on error
-        } finally {
-            setUpdatingStats(false);
-        }
-    };
-
-    const updateMyStats = async () => {
-        if (!party || !currentUserEmail) return;
-
-        const currentMember = party.members.find(m => m.email === currentUserEmail);
-
-        if (!currentMember) {
-            toast.error("Could not find your member information");
-            return;
-        }
-
-        setUpdatingStats(true);
-        try {
-            const response = await fetch("/api/leetcode/stats", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    username: currentMember.leetcodeUsername,
-                    partyCode: code
-                }),
-            });
-
-            const data = await response.json();
-            if (response.ok) {
-                toast.success("Your stats have been updated!");
-                await fetchParty();
-            } else {
-                toast.error(data.error || "Failed to update your stats");
-            }
-        } catch (error) {
-            console.error("Error updating stats:", error);
-            toast.error("Failed to update your stats");
+            setStatsUpdateCooldown(0);
         } finally {
             setUpdatingStats(false);
         }
@@ -789,117 +766,99 @@ export default function PartyPage({ code }: { code: string }) {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950 text-white">
-            {/* Mobile-First Navigation */}
-            <nav className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-sm border-b border-slate-800/50">
-                <div className="px-4 sm:px-6">
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950">
+            {/* Navigation Header */}
+            <nav className="border-b border-slate-800/50 backdrop-blur-sm bg-slate-950/80 sticky top-0 z-50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
-                        {/* Left side - Back button and title */}
-                        <div className="flex items-center space-x-3 min-w-0 flex-1">
+                        <div className="flex items-center space-x-4">
                             <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => router.push("/dashboard")}
-                                className="text-slate-400 hover:text-white p-2"
+                                className="text-slate-400 hover:text-white"
                             >
-                                <ArrowLeft className="w-5 h-5" />
+                                <ArrowLeft className="w-4 h-4 mr-2" />
+                                Back
                             </Button>
-                            <div className="min-w-0 flex-1">
-                                <h1 className="text-lg sm:text-xl font-bold text-white truncate">{party.name}</h1>
-                                <p className="text-xs sm:text-sm text-slate-400 truncate">Code: {party.code}</p>
+                            <div>
+                                <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 text-transparent bg-clip-text">
+                                    {party.name}
+                                </h1>
+                                <p className="text-slate-400 text-sm">
+                                    Code: {party.code} • {party.members.length} members
+                                </p>
                             </div>
                         </div>
-
-                        {/* Right side - Actions */}
-                        <div className="flex items-center space-x-2 flex-shrink-0">
+                        
+                        <div className="flex items-center space-x-3">
                             {/* Desktop Actions */}
-                            <div className="hidden lg:flex items-center space-x-2">
-                                <Button
-                                    onClick={() => setShowGameMaster(true)}
-                                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                                    size="sm"
-                                >
-                                    <Sparkles className="w-4 h-4 mr-1" />
-                                    Game Master
-                                </Button>
-
+                            <div className="hidden lg:flex items-center space-x-3">
                                 {isOwner && (
                                     <Button
                                         variant="outline"
+                                        size="sm"
                                         onClick={updateAllStats}
                                         disabled={updatingStats || statsUpdateCooldown > 0}
                                         className="border-slate-700 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300"
-                                        size="sm"
                                     >
-                                        <RefreshCw className={`w-4 h-4 mr-1 ${updatingStats ? 'animate-spin' : ''}`} />
-                                        {statsUpdateCooldown > 0 ? `${statsUpdateCooldown}s` : 'Update All'}
+                                        <RefreshCw className={`w-4 h-4 mr-2 ${updatingStats ? 'animate-spin' : ''}`} />
+                                        {statsUpdateCooldown > 0 ? `${statsUpdateCooldown}s` : 'Update Stats'}
                                     </Button>
                                 )}
-
                                 <Button
                                     variant="outline"
+                                    size="sm"
                                     onClick={handleRefresh}
                                     disabled={refreshing}
                                     className="border-slate-700 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300"
-                                    size="sm"
                                 >
-                                    <RefreshCw className={`w-4 h-4 mr-1 ${refreshing ? 'animate-spin' : ''}`} />
+                                    <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                                     Refresh
                                 </Button>
-
                                 <Button
                                     variant="outline"
+                                    size="sm"
                                     onClick={shareParty}
                                     className="border-slate-700 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300"
-                                    size="sm"
                                 >
-                                    <Share2 className="w-4 h-4 mr-1" />
+                                    <Share2 className="w-4 h-4 mr-2" />
                                     Share
                                 </Button>
-
                                 {isOwner && (
                                     <Button
                                         variant="outline"
-                                        onClick={() => setShowSettings(true)}
-                                        className="border-slate-600 bg-slate-800/50 hover:bg-slate-700/50"
                                         size="sm"
+                                        onClick={() => setShowSettings(true)}
+                                        className="border-slate-700 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300"
                                     >
-                                        <Settings className="w-4 h-4 mr-1" />
+                                        <Settings className="w-4 h-4 mr-2" />
                                         Settings
                                     </Button>
                                 )}
-
                                 <Button
-                                    variant="outline"
-                                    onClick={() => setShowLeaveConfirm(true)}
-                                    className="border-red-500/50 text-red-400 hover:bg-red-500/20"
+                                    variant="destructive"
                                     size="sm"
+                                    onClick={() => setShowLeaveConfirm(true)}
+                                    className="bg-red-600/20 border border-red-500/30 hover:bg-red-600/30 text-red-400"
                                 >
-                                    <LogOut className="w-4 h-4 mr-1" />
+                                    <LogOut className="w-4 h-4 mr-2" />
                                     Leave
                                 </Button>
                             </div>
 
-                            {/* Mobile/Tablet Actions */}
-                            <div className="flex lg:hidden items-center space-x-2">
-                                <Button
-                                    onClick={() => setShowGameMaster(true)}
-                                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                                    size="sm"
-                                >
-                                    <Sparkles className="w-4 h-4" />
-                                </Button>
-
+                            {/* Mobile Actions */}
+                            <div className="lg:hidden">
                                 <MobileActionMenu
                                     isOwner={isOwner}
-                                    onGameMaster={() => setShowGameMaster(true)}
                                     onUpdateAllStats={updateAllStats}
                                     onRefresh={handleRefresh}
                                     onShare={shareParty}
                                     onSettings={() => setShowSettings(true)}
                                     onLeave={() => setShowLeaveConfirm(true)}
-                                    updatingStats={updatingStats || statsUpdateCooldown > 0}
+                                    updatingStats={updatingStats}
                                     refreshing={refreshing}
+                                    statsUpdateCooldown={statsUpdateCooldown}
                                 />
                             </div>
                         </div>
@@ -907,159 +866,250 @@ export default function PartyPage({ code }: { code: string }) {
                 </div>
             </nav>
 
-            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-                {/* Party Info Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 lg:mb-8">
-                    <Card className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/20 backdrop-blur-sm">
-                        <CardContent className="p-3 sm:p-4 lg:p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-purple-300 text-xs sm:text-sm font-medium">Total Members</p>
-                                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">
-                                        {party.members.length}
-                                        {party.maxMembers && (
-                                            <span className="text-sm sm:text-base lg:text-lg text-slate-400">
-                                                /{party.maxMembers}
-                                            </span>
-                                        )}
-                                    </p>
-                                </div>
-                                <Users className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-purple-400" />
-                            </div>
-                        </CardContent>
-                    </Card>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Tab Navigation */}
+                <div className="mb-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                        <div>
+                            <h2 className="text-3xl font-bold text-white">Party Dashboard</h2>
+                            <p className="text-slate-400 mt-1">
+                                Track party progress, analyze performance, and compete with friends
+                            </p>
+                        </div>
+                    </div>
 
-                    <Card className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/20 backdrop-blur-sm">
-                        <CardContent className="p-3 sm:p-4 lg:p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-blue-300 text-xs sm:text-sm font-medium">Created</p>
-                                    <p className="text-sm sm:text-lg lg:text-xl font-bold text-white">
-                                        {new Date(party.createdAt).toLocaleDateString()}
-                                    </p>
-                                </div>
-                                <Calendar className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-blue-400" />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/20 backdrop-blur-sm">
-                        <CardContent className="p-3 sm:p-4 lg:p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-green-300 text-xs sm:text-sm font-medium">Problems Solved</p>
-                                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">
-                                        {party.members.reduce((sum, member) => sum + getMemberProgress(member).total, 0)}
-                                    </p>
-                                </div>
-                                <Target className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-green-400" />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-500/20 backdrop-blur-sm">
-                        <CardContent className="p-3 sm:p-4 lg:p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-yellow-300 text-xs sm:text-sm font-medium">Party Code</p>
-                                    <p className="text-lg sm:text-xl lg:text-2xl font-bold text-white font-mono">{party.code}</p>
-                                </div>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={copyPartyCode}
-                                    className="text-yellow-400 hover:text-yellow-300 p-1"
+                    {/* Tab Buttons */}
+                    <div className="flex flex-wrap gap-2 sm:gap-4 border-b border-slate-700/50 pb-4">
+                        {tabs.map((tab) => {
+                            const Icon = tab.icon;
+                            const isActive = activeTab === tab.id;
+                            
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id as TabType)}
+                                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                                        isActive
+                                            ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/20'
+                                            : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 hover:text-white'
+                                    }`}
                                 >
-                                    <Copy className="w-5 h-5 sm:w-6 sm:h-6" />
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
+                                    <Icon className="w-4 h-4" />
+                                    <span className="font-medium">{tab.name}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
 
-                {/* Leaderboard */}
-                <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
-                    <CardHeader className="p-4 sm:p-6">
-                        <CardTitle className="text-white flex items-center text-lg sm:text-xl">
-                            <Trophy className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-yellow-500" />
-                            Leaderboard - Problems Solved After Joining
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="space-y-0">
-                            <AnimatePresence>
-                                {sortedMembers.map((member, index) => {
-                                    const progress = getMemberProgress(member);
-                                    return (
-                                        <motion.div
-                                            key={member.email}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: index * 0.05 }}
-                                            className={`p-3 sm:p-4 lg:p-6 border-b border-slate-700/30 last:border-b-0 hover:bg-slate-700/20 transition-colors cursor-pointer ${
-                                                index === 0 ? 'bg-gradient-to-r from-yellow-500/5 to-orange-500/5' : ''
-                                            }`}
-                                            onClick={() => setSelectedMember(member)}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
-                                                    <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm flex-shrink-0 ${
-                                                        index === 0 ? 'bg-yellow-500 text-black' :
-                                                        index === 1 ? 'bg-slate-400 text-black' :
-                                                        index === 2 ? 'bg-amber-600 text-white' :
-                                                        'bg-slate-700 text-slate-300'
-                                                    }`}>
-                                                        {index === 0 ? '👑' : index + 1}
-                                                    </div>
-                                                    <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-                                                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
-                                                            <span className="text-white font-bold text-xs sm:text-sm">
-                                                                {member.displayName.charAt(0).toUpperCase()}
-                                                            </span>
-                                                        </div>
-                                                        <div className="min-w-0 flex-1">
-                                                            <div className="flex items-center space-x-1 sm:space-x-2">
-                                                                <span className={`font-semibold text-sm sm:text-base truncate ${
-                                                                    member.email === currentUserEmail ? 'text-purple-400' : 'text-white'
-                                                                }`}>
-                                                                    {member.displayName}
-                                                                    {member.email === currentUserEmail && (
-                                                                        <span className="text-purple-400 text-xs sm:text-sm ml-1">(You)</span>
-                                                                    )}
-                                                                </span>
-                                                                {member.isOwner && <Crown className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 flex-shrink-0" />}
-                                                            </div>
-                                                            <p className="text-slate-400 text-xs sm:text-sm truncate">@{member.handle}</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right flex-shrink-0">
-                                                    <p className="text-xl sm:text-2xl font-bold text-white">
-                                                        {progress.total}
-                                                    </p>
-                                                    <div className="flex space-x-2 sm:space-x-4 text-xs sm:text-sm">
-                                                        <span className="text-green-400">
-                                                            E: {progress.easy}
+                {/* Tab Content */}
+                <AnimatePresence mode="wait">
+                    {activeTab === 'overview' && (
+                        <motion.div
+                            key="overview"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            {/* Party Info Cards */}
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 lg:mb-8">
+                                <Card className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/20 backdrop-blur-sm">
+                                    <CardContent className="p-3 sm:p-4 lg:p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-purple-300 text-xs sm:text-sm font-medium">Total Members</p>
+                                                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">
+                                                    {party.members.length}
+                                                    {party.maxMembers && (
+                                                        <span className="text-sm sm:text-base lg:text-lg text-slate-400">
+                                                            /{party.maxMembers}
                                                         </span>
-                                                        <span className="text-yellow-400">
-                                                            M: {progress.medium}
-                                                        </span>
-                                                        <span className="text-red-400">
-                                                            H: {progress.hard}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-xs text-slate-500 mt-1">
-                                                        Total: {member.stats.total} problems
-                                                    </p>
-                                                </div>
+                                                    )}
+                                                </p>
                                             </div>
-                                        </motion.div>
-                                    );
-                                })}
-                            </AnimatePresence>
-                        </div>
-                    </CardContent>
-                </Card>
+                                            <Users className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-purple-400" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/20 backdrop-blur-sm">
+                                    <CardContent className="p-3 sm:p-4 lg:p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-blue-300 text-xs sm:text-sm font-medium">Created</p>
+                                                <p className="text-sm sm:text-lg lg:text-xl font-bold text-white">
+                                                    {new Date(party.createdAt).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                            <Calendar className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-blue-400" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/20 backdrop-blur-sm">
+                                    <CardContent className="p-3 sm:p-4 lg:p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-green-300 text-xs sm:text-sm font-medium">Problems Solved</p>
+                                                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">
+                                                    {party.members.reduce((sum, member) => sum + getMemberProgress(member).total, 0)}
+                                                </p>
+                                            </div>
+                                            <Target className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-green-400" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-500/20 backdrop-blur-sm">
+                                    <CardContent className="p-3 sm:p-4 lg:p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-yellow-300 text-xs sm:text-sm font-medium">Party Code</p>
+                                                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-white font-mono">{party.code}</p>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={copyPartyCode}
+                                                className="text-yellow-400 hover:text-yellow-300 p-1"
+                                            >
+                                                <Copy className="w-5 h-5 sm:w-6 sm:h-6" />
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            {/* Leaderboard */}
+                            <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
+                                <CardHeader className="p-4 sm:p-6">
+                                    <CardTitle className="text-white flex items-center text-lg sm:text-xl">
+                                        <Trophy className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-yellow-500" />
+                                        Leaderboard - Problems Solved After Joining
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    <div className="space-y-0">
+                                        <AnimatePresence>
+                                            {sortedMembers.map((member, index) => {
+                                                const progress = getMemberProgress(member);
+                                                return (
+                                                    <motion.div
+                                                        key={member.email}
+                                                        initial={{ opacity: 0, y: 20 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        transition={{ delay: index * 0.05 }}
+                                                        className={`p-3 sm:p-4 lg:p-6 border-b border-slate-700/30 last:border-b-0 hover:bg-slate-700/20 transition-colors cursor-pointer ${
+                                                            index === 0 ? 'bg-gradient-to-r from-yellow-500/5 to-orange-500/5' : ''
+                                                        }`}
+                                                        onClick={() => setSelectedMember(member)}
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+                                                                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm flex-shrink-0 ${
+                                                                    index === 0 ? 'bg-yellow-500 text-black' :
+                                                                    index === 1 ? 'bg-slate-400 text-black' :
+                                                                    index === 2 ? 'bg-amber-600 text-white' :
+                                                                    'bg-slate-700 text-slate-300'
+                                                                }`}>
+                                                                    {index === 0 ? '👑' : index + 1}
+                                                                </div>
+                                                                <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                                                                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                                                        <span className="text-white font-bold text-xs sm:text-sm">
+                                                                            {member.displayName.charAt(0).toUpperCase()}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <div className="flex items-center space-x-1 sm:space-x-2">
+                                                                            <span className={`font-semibold text-sm sm:text-base truncate ${
+                                                                                member.email === currentUserEmail ? 'text-purple-400' : 'text-white'
+                                                                            }`}>
+                                                                                {member.displayName}
+                                                                                {member.email === currentUserEmail && (
+                                                                                    <span className="text-purple-400 text-xs sm:text-sm ml-1">(You)</span>
+                                                                                )}
+                                                                            </span>
+                                                                            {member.isOwner && <Crown className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 flex-shrink-0" />}
+                                                                        </div>
+                                                                        <p className="text-slate-400 text-xs sm:text-sm truncate">@{member.handle}</p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-right flex-shrink-0">
+                                                                <p className="text-xl sm:text-2xl font-bold text-white">
+                                                                    {progress.total}
+                                                                </p>
+                                                                <div className="flex space-x-2 sm:space-x-4 text-xs sm:text-sm">
+                                                                    <span className="text-green-400">
+                                                                        E: {progress.easy}
+                                                                    </span>
+                                                                    <span className="text-yellow-400">
+                                                                        M: {progress.medium}
+                                                                    </span>
+                                                                    <span className="text-red-400">
+                                                                        H: {progress.hard}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-xs text-slate-500 mt-1">
+                                                                    Total: {member.stats.total} problems
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </motion.div>
+                                                );
+                                            })}
+                                        </AnimatePresence>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    )}
+
+                    {activeTab === 'analytics' && (
+                        <motion.div
+                            key="analytics"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <PartyAnalytics partyCode={code} members={party.members} />
+                        </motion.div>
+                    )}
+
+                    {activeTab === 'gamemaster' && (
+                        <motion.div
+                            key="gamemaster"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.3 }}
+                            className="min-h-[60vh]"
+                        >
+                            <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
+                                <CardHeader className="p-4 sm:p-6 border-b border-slate-700/50">
+                                    <CardTitle className="text-white flex items-center text-lg sm:text-xl">
+                                        <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-purple-400" />
+                                        Game Master
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    <GameMaster
+                                        partyCode={code}
+                                        isOwner={isOwner}
+                                        currentUserEmail={currentUserEmail || undefined}
+                                        currentUserName={(() => {
+                                            const currentMember = party?.members.find(m => m.email === currentUserEmail);
+                                            return currentMember?.displayName || currentMember?.handle || undefined;
+                                        })()}
+                                    />
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             {/* Modals */}
@@ -1113,50 +1163,6 @@ export default function PartyPage({ code }: { code: string }) {
                                         Leave Party
                                     </Button>
                                 </div>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-
-                {showGameMaster && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
-                        onClick={() => setShowGameMaster(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-slate-700/50 w-full max-w-6xl max-h-[95vh] flex flex-col"
-                        >
-                            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-700/50 flex-shrink-0">
-                                <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center">
-                                    <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-purple-400" />
-                                    Game Master
-                                </h2>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setShowGameMaster(false)}
-                                    className="text-slate-400 hover:text-white"
-                                >
-                                    <X className="w-5 h-5" />
-                                </Button>
-                            </div>
-                            <div className="overflow-y-auto flex-1">
-                                <GameMaster
-                                    partyCode={code}
-                                    isOwner={isOwner}
-                                    currentUserEmail={currentUserEmail || undefined}
-                                    currentUserName={(() => {
-                                        const currentMember = party?.members.find(m => m.email === currentUserEmail);
-                                        return currentMember?.displayName || currentMember?.handle || undefined;
-                                    })()}
-                                />
                             </div>
                         </motion.div>
                     </motion.div>

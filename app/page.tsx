@@ -501,10 +501,6 @@ export default async function Home() {
               <span>Made with ❤️ for the coding community</span>
               <a href="#" className="hover:text-white transition-colors">Privacy</a>
               <a href="#" className="hover:text-white transition-colors">Terms</a>
-              <a href="https://github.com/tarush10000/leetfriends" className="hover:text-white transition-colors flex items-center">
-                <Github className="w-4 h-4 mr-1" />
-                GitHub
-              </a>
             </div>
           </div>
         </div>
