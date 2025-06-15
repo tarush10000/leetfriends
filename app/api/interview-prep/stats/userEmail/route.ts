@@ -3,14 +3,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 
-export async function GET(req: NextRequest, { params }: { params: { userEmail: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ userEmail: string }> }) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user?.email) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { userEmail } = params;
+        const { userEmail } = await params;
         const decodedEmail = decodeURIComponent(userEmail);
 
         if (session.user.email !== decodedEmail) {
