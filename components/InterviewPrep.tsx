@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,29 @@ import {
     Download,
     Eye,
     EyeOff,
-    Timer
+    Timer,
+    Cpu,
+    Smartphone,
+    Globe,
+    Car,
+    CreditCard,
+    Gamepad2,
+    Music,
+    Video,
+    Briefcase,
+    ShoppingCart,
+    Database,
+    Cloud,
+    Code,
+    Zap,
+    Settings,
+    Users,
+    Layers,
+    Shield,
+    Activity,
+    ChevronDown,
+    ChevronUp,
+    Grid3X3
 } from "lucide-react";
 
 interface InterviewQuestion {
@@ -34,7 +56,7 @@ interface InterviewQuestion {
     acceptance: number;
     link: string;
     company: string;
-    timeFrame: string; // "Thirty Days", "Three Months", etc.
+    timeFrame: string;
     isCompleted: boolean;
     completedAt?: string;
 }
@@ -52,24 +74,60 @@ interface InterviewPrepProps {
     userEmail: string;
 }
 
-const companyLogos: Record<string, string> = {
-    'AMD': '💻',
-    'AQR Capital Management': '📈',
-    'Accenture': '🔷',
-    'Accolite': '🏢',
-    'Acko': '🛡️',
-    'Activision': '🎮',
-    'Adobe': '🔴',
-    'Affirm': '💳',
-    'Google': '🔍',
-    'Meta': '👤',
-    'Amazon': '📦',
-    'Apple': '🍎',
-    'Microsoft': '🪟',
-    'Netflix': '🎬',
-    'Tesla': '⚡',
-    'Uber': '🚗',
-    'Default': '🏢'
+// Lucide icons mapping for companies
+const getCompanyIcon = (companyName: string) => {
+    const name = companyName.toLowerCase();
+    
+    // Tech Giants
+    if (name.includes('google')) return Globe;
+    if (name.includes('meta') || name.includes('facebook')) return Users;
+    if (name.includes('amazon')) return ShoppingCart;
+    if (name.includes('apple')) return Smartphone;
+    if (name.includes('microsoft')) return Code;
+    if (name.includes('netflix')) return Video;
+    if (name.includes('tesla')) return Car;
+    if (name.includes('uber')) return Car;
+    if (name.includes('adobe')) return Layers;
+    
+    // Financial/Fintech
+    if (name.includes('goldman') || name.includes('jpmorgan') || name.includes('bank')) return Briefcase;
+    if (name.includes('stripe') || name.includes('square') || name.includes('paypal')) return CreditCard;
+    if (name.includes('visa') || name.includes('mastercard')) return CreditCard;
+    if (name.includes('affirm') || name.includes('klarna')) return CreditCard;
+    
+    // Gaming/Entertainment
+    if (name.includes('activision') || name.includes('blizzard') || name.includes('riot')) return Gamepad2;
+    if (name.includes('spotify') || name.includes('soundcloud')) return Music;
+    if (name.includes('tiktok') || name.includes('youtube')) return Video;
+    
+    // Cloud/Infrastructure
+    if (name.includes('aws') || name.includes('azure') || name.includes('gcp')) return Cloud;
+    if (name.includes('databricks') || name.includes('snowflake')) return Database;
+    if (name.includes('cloudflare') || name.includes('akamai')) return Shield;
+    
+    // Hardware/Semiconductor
+    if (name.includes('nvidia') || name.includes('amd') || name.includes('intel')) return Cpu;
+    if (name.includes('qualcomm') || name.includes('broadcom')) return Cpu;
+    
+    // Social/Communication
+    if (name.includes('slack') || name.includes('discord') || name.includes('zoom')) return Users;
+    if (name.includes('twitter') || name.includes('linkedin')) return Users;
+    
+    // E-commerce/Retail
+    if (name.includes('shopify') || name.includes('ebay') || name.includes('etsy')) return ShoppingCart;
+    if (name.includes('doordash') || name.includes('instacart')) return ShoppingCart;
+    
+    // Consulting/Services
+    if (name.includes('accenture') || name.includes('deloitte')) return Briefcase;
+    if (name.includes('mckinsey') || name.includes('bain')) return Briefcase;
+    
+    // Startups/Unicorns
+    if (name.includes('airbnb')) return Building;
+    if (name.includes('coinbase') || name.includes('crypto')) return CreditCard;
+    if (name.includes('robinhood')) return TrendingUp;
+    
+    // Default
+    return Building;
 };
 
 const difficultyColors = {
@@ -97,16 +155,61 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
     const [showCompleted, setShowCompleted] = useState(true);
     const [sortBy, setSortBy] = useState<'frequency' | 'difficulty' | 'acceptance'>('frequency');
     const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(new Set());
+    const [showAllCompanies, setShowAllCompanies] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
-        fetchInterviewData();
-        fetchUserProgress();
-    }, [userEmail]);
+    // Memoized filtered and sorted questions
+    const filteredAndSortedQuestions = useMemo(() => {
+        const filtered = questions.filter(q => {
+            const companyMatch = selectedCompany === 'all' || q.company === selectedCompany;
+            const difficultyMatch = selectedDifficulty === 'all' || q.difficulty.toLowerCase() === selectedDifficulty.toLowerCase();
+            const timeFrameMatch = selectedTimeFrame === 'all' || q.timeFrame === selectedTimeFrame;
+            const searchMatch = searchQuery === '' || 
+                q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                q.company.toLowerCase().includes(searchQuery.toLowerCase());
+            const completedMatch = showCompleted || !completedQuestions.has(q.id);
+            
+            return companyMatch && difficultyMatch && timeFrameMatch && searchMatch && completedMatch;
+        });
 
-    const fetchInterviewData = async () => {
-        setLoading(true);
+        return filtered.sort((a, b) => {
+            switch (sortBy) {
+                case 'frequency':
+                    return b.frequency - a.frequency;
+                case 'difficulty':
+                    const difficultyOrder = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
+                    return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
+                case 'acceptance':
+                    return b.acceptance - a.acceptance;
+                default:
+                    return 0;
+            }
+        });
+    }, [questions, selectedCompany, selectedDifficulty, selectedTimeFrame, searchQuery, showCompleted, completedQuestions, sortBy]);
+
+    // Memoized stats
+    const stats = useMemo(() => {
+        const totalQuestions = questions.length;
+        const totalCompleted = completedQuestions.size;
+        const completionPercentage = totalQuestions > 0 ? (totalCompleted / totalQuestions) * 100 : 0;
+
+        const difficultyStats = {
+            easy: questions.filter(q => completedQuestions.has(q.id) && q.difficulty === 'Easy').length,
+            medium: questions.filter(q => completedQuestions.has(q.id) && q.difficulty === 'Medium').length,
+            hard: questions.filter(q => completedQuestions.has(q.id) && q.difficulty === 'Hard').length
+        };
+
+        return { totalQuestions, totalCompleted, completionPercentage, difficultyStats };
+    }, [questions, completedQuestions]);
+
+    // Companies to display
+    const displayedCompanies = showAllCompanies ? companies : companies.slice(0, 12);
+
+    const fetchInterviewData = useCallback(async (forceRefresh = false) => {
         try {
+            setRefreshing(forceRefresh);
             const response = await fetch('/api/interview-prep/questions');
+            
             if (response.ok) {
                 const data = await response.json();
                 setQuestions(data.questions);
@@ -116,12 +219,13 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
             console.error("Error fetching interview data:", error);
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
-    };
+    }, []);
 
-    const fetchUserProgress = async () => {
+    const fetchUserProgress = useCallback(async () => {
         try {
-            const response = await fetch(`/api/interview-prep/progress/${userEmail}`);
+            const response = await fetch(`/api/interview-prep/progress/${encodeURIComponent(userEmail)}`);
             if (response.ok) {
                 const data = await response.json();
                 setCompletedQuestions(new Set(data.completedQuestions));
@@ -129,9 +233,9 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
         } catch (error) {
             console.error("Error fetching user progress:", error);
         }
-    };
+    }, [userEmail]);
 
-    const toggleQuestionCompletion = async (questionId: string) => {
+    const toggleQuestionCompletion = useCallback(async (questionId: string) => {
         try {
             const isCompleted = completedQuestions.has(questionId);
             const response = await fetch('/api/interview-prep/progress', {
@@ -156,43 +260,12 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
         } catch (error) {
             console.error("Error updating progress:", error);
         }
-    };
+    }, [completedQuestions, userEmail]);
 
-    const filteredQuestions = questions.filter(q => {
-        const companyMatch = selectedCompany === 'all' || q.company === selectedCompany;
-        const difficultyMatch = selectedDifficulty === 'all' || q.difficulty.toLowerCase() === selectedDifficulty.toLowerCase();
-        const timeFrameMatch = selectedTimeFrame === 'all' || q.timeFrame === selectedTimeFrame;
-        const searchMatch = searchQuery === '' || 
-            q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            q.company.toLowerCase().includes(searchQuery.toLowerCase());
-        const completedMatch = showCompleted || !completedQuestions.has(q.id);
-        
-        return companyMatch && difficultyMatch && timeFrameMatch && searchMatch && completedMatch;
-    });
-
-    const sortedQuestions = filteredQuestions.sort((a, b) => {
-        switch (sortBy) {
-            case 'frequency':
-                return b.frequency - a.frequency;
-            case 'difficulty':
-                const difficultyOrder = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
-                return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
-            case 'acceptance':
-                return b.acceptance - a.acceptance;
-            default:
-                return 0;
-        }
-    });
-
-    const totalQuestions = questions.length;
-    const totalCompleted = completedQuestions.size;
-    const completionPercentage = totalQuestions > 0 ? (totalCompleted / totalQuestions) * 100 : 0;
-
-    const difficultyStats = {
-        easy: completedQuestions.size > 0 ? questions.filter(q => completedQuestions.has(q.id) && q.difficulty === 'Easy').length : 0,
-        medium: completedQuestions.size > 0 ? questions.filter(q => completedQuestions.has(q.id) && q.difficulty === 'Medium').length : 0,
-        hard: completedQuestions.size > 0 ? questions.filter(q => completedQuestions.has(q.id) && q.difficulty === 'Hard').length : 0
-    };
+    useEffect(() => {
+        fetchInterviewData();
+        fetchUserProgress();
+    }, [fetchInterviewData, fetchUserProgress]);
 
     if (loading) {
         return (
@@ -216,18 +289,18 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                                 Interview Preparation
                             </h1>
                             <p className="text-slate-400 mt-1">
-                                Real interview questions from top companies • Live data from GitHub
+                                Real interview questions from {companies.length}+ companies • Live data from GitHub
                             </p>
                         </div>
                         
                         <div className="flex items-center space-x-4">
                             <Button
-                                onClick={fetchInterviewData}
-                                disabled={loading}
+                                onClick={() => fetchInterviewData(true)}
+                                disabled={refreshing}
                                 className="bg-purple-600 hover:bg-purple-700"
                             >
-                                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                                Refresh Data
+                                <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                                {refreshing ? 'Refreshing...' : 'Refresh Data'}
                             </Button>
                         </div>
                     </div>
@@ -243,16 +316,16 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                                 <div>
                                     <p className="text-purple-300 text-sm font-medium">Total Progress</p>
                                     <p className="text-2xl font-bold text-white">
-                                        {totalCompleted}/{totalQuestions}
+                                        {stats.totalCompleted}/{stats.totalQuestions}
                                     </p>
-                                    <p className="text-xs text-slate-400">{completionPercentage.toFixed(1)}% Complete</p>
+                                    <p className="text-xs text-slate-400">{stats.completionPercentage.toFixed(1)}% Complete</p>
                                 </div>
                                 <Target className="w-8 h-8 text-purple-400" />
                             </div>
                             <div className="mt-3 w-full h-2 bg-slate-700 rounded-full overflow-hidden">
                                 <div 
                                     className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
-                                    style={{ width: `${completionPercentage}%` }}
+                                    style={{ width: `${stats.completionPercentage}%` }}
                                 />
                             </div>
                         </CardContent>
@@ -263,7 +336,7 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-green-300 text-sm font-medium">Easy</p>
-                                    <p className="text-2xl font-bold text-white">{difficultyStats.easy}</p>
+                                    <p className="text-2xl font-bold text-white">{stats.difficultyStats.easy}</p>
                                 </div>
                                 <CheckCircle className="w-8 h-8 text-green-400" />
                             </div>
@@ -275,7 +348,7 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-yellow-300 text-sm font-medium">Medium</p>
-                                    <p className="text-2xl font-bold text-white">{difficultyStats.medium}</p>
+                                    <p className="text-2xl font-bold text-white">{stats.difficultyStats.medium}</p>
                                 </div>
                                 <TrendingUp className="w-8 h-8 text-yellow-400" />
                             </div>
@@ -287,7 +360,7 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-red-300 text-sm font-medium">Hard</p>
-                                    <p className="text-2xl font-bold text-white">{difficultyStats.hard}</p>
+                                    <p className="text-2xl font-bold text-white">{stats.difficultyStats.hard}</p>
                                 </div>
                                 <Star className="w-8 h-8 text-red-400" />
                             </div>
@@ -298,45 +371,52 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                 {/* Companies Grid */}
                 <Card className="bg-slate-800/50 border-slate-700/50">
                     <CardHeader>
-                        <CardTitle className="text-white flex items-center">
-                            <Building className="w-5 h-5 mr-2 text-blue-400" />
-                            Companies ({companies.length})
+                        <CardTitle className="text-white flex items-center justify-between">
+                            <div className="flex items-center">
+                                <Building className="w-5 h-5 mr-2 text-blue-400" />
+                                Companies ({companies.length})
+                            </div>
+                            {companies.length > 12 && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setShowAllCompanies(!showAllCompanies)}
+                                    className="text-blue-400 hover:text-blue-300"
+                                >
+                                    {showAllCompanies ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                    {showAllCompanies ? 'Show Less' : 'Show All'}
+                                </Button>
+                            )}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                            {companies.slice(0, 12).map((company) => (
-                                <motion.div
-                                    key={company.name}
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => setSelectedCompany(company.name)}
-                                    className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                                        selectedCompany === company.name 
-                                            ? 'border-purple-500/50 bg-purple-500/20' 
-                                            : 'border-slate-700/50 bg-slate-700/20 hover:border-slate-600/50'
-                                    }`}
-                                >
-                                    <div className="text-center">
-                                        <div className="text-2xl mb-1">
-                                            {companyLogos[company.name] || companyLogos.Default}
+                            {displayedCompanies.map((company) => {
+                                const IconComponent = getCompanyIcon(company.name);
+                                return (
+                                    <motion.div
+                                        key={company.name}
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => setSelectedCompany(company.name)}
+                                        className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                                            selectedCompany === company.name 
+                                                ? 'border-purple-500/50 bg-purple-500/20' 
+                                                : 'border-slate-700/50 bg-slate-700/20 hover:border-slate-600/50'
+                                        }`}
+                                    >
+                                        <div className="text-center">
+                                            <IconComponent className="w-6 h-6 mx-auto mb-2 text-blue-400" />
+                                            <p className="text-sm font-medium text-white truncate">{company.name}</p>
+                                            <p className="text-xs text-slate-400">{company.totalQuestions} questions</p>
+                                            <div className="text-xs text-green-400 mt-1">
+                                                {company.completedQuestions}/{company.totalQuestions} done
+                                            </div>
                                         </div>
-                                        <p className="text-sm font-medium text-white truncate">{company.name}</p>
-                                        <p className="text-xs text-slate-400">{company.totalQuestions} questions</p>
-                                        <div className="text-xs text-green-400 mt-1">
-                                            {company.completedQuestions}/{company.totalQuestions} done
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            ))}
+                                    </motion.div>
+                                );
+                            })}
                         </div>
-                        {companies.length > 12 && (
-                            <div className="text-center mt-4">
-                                <Button variant="outline" className="border-slate-600 bg-slate-800/50">
-                                    View All {companies.length} Companies
-                                </Button>
-                            </div>
-                        )}
                     </CardContent>
                 </Card>
 
@@ -352,7 +432,7 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                                         placeholder="Search questions or companies..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-10 bg-slate-700/50 border-slate-600 text-white"
+                                        className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400"
                                     />
                                 </div>
                             </div>
@@ -362,7 +442,7 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                                 <select
                                     value={selectedCompany}
                                     onChange={(e) => setSelectedCompany(e.target.value)}
-                                    className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm"
+                                    className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 >
                                     <option value="all">All Companies</option>
                                     {companies.map(company => (
@@ -373,7 +453,7 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                                 <select
                                     value={selectedDifficulty}
                                     onChange={(e) => setSelectedDifficulty(e.target.value)}
-                                    className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm"
+                                    className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 >
                                     <option value="all">All Difficulties</option>
                                     <option value="easy">Easy</option>
@@ -384,7 +464,7 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                                 <select
                                     value={selectedTimeFrame}
                                     onChange={(e) => setSelectedTimeFrame(e.target.value)}
-                                    className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm"
+                                    className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 >
                                     <option value="all">All Time</option>
                                     {Object.values(timeFrameMapping).map(timeFrame => (
@@ -395,7 +475,7 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                                 <select
                                     value={sortBy}
                                     onChange={(e) => setSortBy(e.target.value as any)}
-                                    className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm"
+                                    className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 >
                                     <option value="frequency">Sort by Frequency</option>
                                     <option value="difficulty">Sort by Difficulty</option>
@@ -406,7 +486,7 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => setShowCompleted(!showCompleted)}
-                                    className={`border-slate-600 ${showCompleted ? 'bg-slate-700/50' : 'bg-green-600'}`}
+                                    className={`border-slate-600 ${showCompleted ? 'bg-slate-700/50 text-white' : 'bg-green-600 text-white'}`}
                                 >
                                     {showCompleted ? <Eye className="w-4 h-4 mr-1" /> : <EyeOff className="w-4 h-4 mr-1" />}
                                     {showCompleted ? 'Hide' : 'Show'} Completed
@@ -420,16 +500,18 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
                         <h3 className="text-xl font-semibold text-white">
-                            Questions ({sortedQuestions.length})
+                            Questions ({filteredAndSortedQuestions.length})
                         </h3>
                         <div className="text-sm text-slate-400">
-                            Showing {sortedQuestions.length} of {questions.length} questions
+                            Showing {filteredAndSortedQuestions.length} of {questions.length} questions
                         </div>
                     </div>
 
                     <AnimatePresence>
-                        {sortedQuestions.map((question, index) => {
+                        {filteredAndSortedQuestions.map((question, index) => {
                             const isCompleted = completedQuestions.has(question.id);
+                            const IconComponent = getCompanyIcon(question.company);
+                            
                             return (
                                 <motion.div
                                     key={question.id}
@@ -469,7 +551,7 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
 
                                                         <div className="flex flex-wrap items-center gap-3 text-sm">
                                                             <div className="flex items-center text-slate-400">
-                                                                <span className="mr-1">{companyLogos[question.company] || companyLogos.Default}</span>
+                                                                <IconComponent className="w-4 h-4 mr-1" />
                                                                 {question.company}
                                                             </div>
                                                             
@@ -507,7 +589,7 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                         })}
                     </AnimatePresence>
 
-                    {sortedQuestions.length === 0 && (
+                    {filteredAndSortedQuestions.length === 0 && (
                         <Card className="bg-slate-800/50 border-slate-700/50">
                             <CardContent className="p-8 text-center">
                                 <Search className="w-12 h-12 text-slate-400 mx-auto mb-4" />
