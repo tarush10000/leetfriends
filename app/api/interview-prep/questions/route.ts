@@ -2,287 +2,408 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { MongoClient } from "mongodb";
 
-interface GitHubFile {
-    name: string;
-    download_url: string;
-    type: string;
+const TIER_1_COMPANIES = [
+    'Google', 'Meta', 'Amazon', 'Apple', 'Microsoft', 'Netflix', 'Tesla',
+    'Uber', 'Airbnb', 'Spotify', 'Adobe', 'Salesforce', 'Oracle', 'Intel', 'AMD'
+];
+
+const TIER_2_COMPANIES = [
+    'Goldman Sachs', 'JPMorgan', 'Morgan Stanley', 'Citadel', 'Two Sigma',
+    'Palantir', 'Databricks', 'Snowflake', 'Stripe', 'Square', 'Coinbase',
+    'Robinhood', 'DoorDash', 'Instacart', 'Zoom', 'Slack', 'Atlassian'
+];
+
+// Create a separate connection for interview_prep database
+async function connectToInterviewDatabase() {
+    const uri = process.env.MONGODB_URI;
+    if (!uri) {
+        throw new Error("MONGODB_URI environment variable is not defined");
+    }
+    
+    const client = new MongoClient(uri);
+    await client.connect();
+    return client.db("interview_prep");
 }
 
-interface CSVRow {
-    Difficulty: string;
-    Title: string;
-    Frequency: string;
-    Acceptance: string;
-    Link: string;
+function getCompanyTier(company: string): string {
+    if (TIER_1_COMPANIES.includes(company)) return "Tier 1";
+    if (TIER_2_COMPANIES.includes(company)) return "Tier 2";
+    return "Tier 3";
 }
 
-const GITHUB_API_BASE = "https://api.github.com/repos/liquidslr/leetcode-company-wise-problems/contents";
-
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user?.email) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // Enhanced error handling for GitHub API
-        const companiesResponse = await fetch(GITHUB_API_BASE, {
-            headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'User-Agent': 'LeetFriends-App',
-                // Add GitHub token if available for higher rate limits
-                ...(process.env.GITHUB_TOKEN && {
-                    'Authorization': `token ${process.env.GITHUB_TOKEN}`
-                })
-            },
-            // Add timeout to prevent hanging requests
-            signal: AbortSignal.timeout(10000) // 10 second timeout
-        });
+        const { searchParams } = new URL(req.url);
+        const filters = {
+            company: searchParams.get('company') || 'all',
+            difficulty: searchParams.get('difficulty') || 'all',
+            time_period: searchParams.get('time_period') || 'all',
+            search: searchParams.get('search') || '',
+            limit: parseInt(searchParams.get('limit') || '50'),
+            offset: parseInt(searchParams.get('offset') || '0'),
+            sort_by: searchParams.get('sort_by') || 'recent'
+        };
 
-        if (!companiesResponse.ok) {
-            const errorText = await companiesResponse.text();
-            console.error(`GitHub API Error: ${companiesResponse.status} - ${errorText}`);
-            
-            // Check for specific error types
-            if (companiesResponse.status === 403) {
-                console.error("GitHub API rate limit exceeded");
-                return NextResponse.json({ 
-                    error: "Rate limit exceeded. Please try again later." 
-                }, { status: 429 });
-            }
-            
-            if (companiesResponse.status === 404) {
-                console.error("GitHub repository not found");
-                return NextResponse.json({ 
-                    error: "Repository not found" 
-                }, { status: 404 });
-            }
-            
-            throw new Error(`GitHub API request failed: ${companiesResponse.status}`);
-        }
+        console.log("API Filters:", filters);
 
-        const companies: GitHubFile[] = await companiesResponse.json();
-        const companyDirs = companies.filter(item => item.type === 'dir');
+        const db = await connectToInterviewDatabase();
+        const questionsCollection = db.collection("questions");
+        const questionsAskedCollection = db.collection("questions_asked");
 
-        if (companyDirs.length === 0) {
-            console.warn("No company directories found in repository");
-            return NextResponse.json({
-                questions: [],
-                companies: []
-            });
-        }
-
-        const allQuestions: any[] = [];
-        const companyStats: any[] = [];
-
-        // Process each company (limit to first 20 for performance)
-        const companiesToProcess = companyDirs.slice(0, 20);
-
-        for (const company of companiesToProcess) {
-            try {
-                // Add delay to avoid overwhelming the API
-                await new Promise(resolve => setTimeout(resolve, 100));
-
-                // Fetch CSV files for this company with timeout
-                const companyFilesResponse = await fetch(`${GITHUB_API_BASE}/${company.name}`, {
-                    headers: {
-                        'Accept': 'application/vnd.github.v3+json',
-                        'User-Agent': 'LeetFriends-App',
-                        ...(process.env.GITHUB_TOKEN && {
-                            'Authorization': `token ${process.env.GITHUB_TOKEN}`
-                        })
-                    },
-                    signal: AbortSignal.timeout(10000)
-                });
-
-                if (!companyFilesResponse.ok) {
-                    console.warn(`Failed to fetch files for company ${company.name}: ${companyFilesResponse.status}`);
-                    continue;
+        // Build the aggregation pipeline that groups by question_id and collects all companies
+        const pipeline: any[] = [
+            // First, get all question-company combinations with filters applied
+            {
+                $lookup: {
+                    from: "questions_asked",
+                    localField: "question_id",
+                    foreignField: "question_id",
+                    as: "asked_data"
                 }
-
-                const companyFiles: GitHubFile[] = await companyFilesResponse.json();
-                const csvFiles = companyFiles.filter(file => file.name.endsWith('.csv'));
-
-                let companyQuestionCount = 0;
-
-                for (const csvFile of csvFiles) {
-                    try {
-                        // Add delay between CSV file requests
-                        await new Promise(resolve => setTimeout(resolve, 200));
-
-                        // Fetch and parse CSV content with timeout
-                        const csvResponse = await fetch(csvFile.download_url, {
-                            signal: AbortSignal.timeout(15000)
-                        });
-                        
-                        if (!csvResponse.ok) {
-                            console.warn(`Failed to fetch CSV ${csvFile.name}: ${csvResponse.status}`);
-                            continue;
+            },
+            
+            // Only keep questions that have company data
+            { $match: { "asked_data.0": { $exists: true } } },
+            
+            // Unwind to process each company separately
+            { $unwind: "$asked_data" },
+            
+            // Apply company and time period filters at the company level
+            {
+                $match: {
+                    ...(filters.company !== 'all' && { "asked_data.company": filters.company }),
+                    ...(filters.time_period !== 'all' && { "asked_data.time_period": filters.time_period })
+                }
+            },
+            
+            // Group back by question_id to collect all companies for each question
+            {
+                $group: {
+                    _id: "$question_id",
+                    question_data: { $first: "$$ROOT" },
+                    companies: {
+                        $push: {
+                            name: "$asked_data.company",
+                            frequency: "$asked_data.frequency",
+                            time_period: "$asked_data.time_period",
+                            tier: {
+                                $cond: {
+                                    if: { $in: ["$asked_data.company", TIER_1_COMPANIES] },
+                                    then: "Tier 1",
+                                    else: {
+                                        $cond: {
+                                            if: { $in: ["$asked_data.company", TIER_2_COMPANIES] },
+                                            then: "Tier 2",
+                                            else: "Tier 3"
+                                        }
+                                    }
+                                }
+                            }
                         }
-
-                        const csvText = await csvResponse.text();
-                        const rows = parseCSV(csvText);
-
-                        // Convert to our question format
-                        const questions = rows.map((row, index) => ({
-                            id: `${company.name}-${csvFile.name}-${index}`,
-                            title: row.Title || 'Unknown Title',
-                            difficulty: normalizeDifficulty(row.Difficulty),
-                            frequency: parseInt(row.Frequency) || 0,
-                            acceptance: parseFloat(row.Acceptance) || 0,
-                            link: row.Link || '#',
-                            company: formatCompanyName(company.name),
-                            timeFrame: getTimeFrameFromFileName(csvFile.name),
-                            isCompleted: false
-                        }));
-
-                        allQuestions.push(...questions);
-                        companyQuestionCount += questions.length;
-
-                    } catch (csvError) {
-                        console.error(`Error processing CSV ${csvFile.name}:`, csvError);
-                        continue;
+                    },
+                    total_frequency: { $sum: "$asked_data.frequency" },
+                    max_frequency: { $max: "$asked_data.frequency" },
+                    company_count: { $sum: 1 },
+                    highest_tier: {
+                        $min: {
+                            $cond: {
+                                if: { $in: ["$asked_data.company", TIER_1_COMPANIES] },
+                                then: 1,
+                                else: {
+                                    $cond: {
+                                        if: { $in: ["$asked_data.company", TIER_2_COMPANIES] },
+                                        then: 2,
+                                        else: 3
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    most_recent_score: {
+                        $max: {
+                            $switch: {
+                                branches: [
+                                    { case: { $eq: ["$asked_data.time_period", "Last 30 Days"] }, then: 5 },
+                                    { case: { $eq: ["$asked_data.time_period", "Last 3 Months"] }, then: 4 },
+                                    { case: { $eq: ["$asked_data.time_period", "Last 6 Months"] }, then: 3 },
+                                    { case: { $eq: ["$asked_data.time_period", "6+ Months Ago"] }, then: 2 }
+                                ],
+                                default: 1
+                            }
+                        }
                     }
                 }
-
-                // Add company stats
-                if (companyQuestionCount > 0) {
-                    companyStats.push({
-                        name: formatCompanyName(company.name),
-                        logo: getCompanyLogo(company.name),
-                        totalQuestions: companyQuestionCount,
-                        completedQuestions: 0,
-                        averageDifficulty: calculateAverageDifficulty(
-                            allQuestions.filter(q => q.company === formatCompanyName(company.name))
-                        ),
-                        lastUpdated: new Date().toISOString()
-                    });
+            },
+            
+            // Add computed fields for the grouped question
+            {
+                $addFields: {
+                    question_id: "$_id",
+                    title: "$question_data.title",
+                    difficulty: "$question_data.difficulty",
+                    leetcode_link: "$question_data.leetcode_link",
+                    topics: "$question_data.topics",
+                    acceptance_rate: "$question_data.acceptance_rate",
+                    
+                    // Calculate priority score based on all companies
+                    priority_score: {
+                        $add: [
+                            "$total_frequency",
+                            {
+                                $multiply: [
+                                    "$company_count",
+                                    {
+                                        $switch: {
+                                            branches: [
+                                                { case: { $eq: ["$highest_tier", 1] }, then: 20 },
+                                                { case: { $eq: ["$highest_tier", 2] }, then: 10 }
+                                            ],
+                                            default: 5
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    
+                    recency_score: "$most_recent_score",
+                    
+                    // Get the highest tier as string
+                    company_tier: {
+                        $switch: {
+                            branches: [
+                                { case: { $eq: ["$highest_tier", 1] }, then: "Tier 1" },
+                                { case: { $eq: ["$highest_tier", 2] }, then: "Tier 2" }
+                            ],
+                            default: "Tier 3"
+                        }
+                    }
                 }
-
-            } catch (companyError) {
-                console.error(`Error processing company ${company.name}:`, companyError);
-                continue;
             }
+        ];
+
+        // Apply remaining filters
+        const matchConditions: any = {};
+
+        if (filters.difficulty !== 'all') {
+            matchConditions.difficulty = filters.difficulty.toUpperCase();
         }
 
-        // Sort questions by frequency and remove duplicates
-        const uniqueQuestions = removeDuplicateQuestions(allQuestions);
-        const sortedQuestions = uniqueQuestions.sort((a, b) => b.frequency - a.frequency);
+        if (filters.search) {
+            matchConditions.$or = [
+                { title: new RegExp(filters.search, 'i') },
+                { "companies.name": new RegExp(filters.search, 'i') }
+            ];
+        }
 
-        return NextResponse.json({
-            questions: sortedQuestions.slice(0, 1000),
-            companies: companyStats.sort((a, b) => b.totalQuestions - a.totalQuestions)
-        });
+        if (Object.keys(matchConditions).length > 0) {
+            pipeline.push({ $match: matchConditions });
+        }
+
+        // Add sorting
+        let sortStage: any = {};
+        switch (filters.sort_by) {
+            case 'recent':
+                sortStage = { recency_score: -1, total_frequency: -1 };
+                break;
+            case 'frequency':
+                sortStage = { total_frequency: -1, priority_score: -1 };
+                break;
+            case 'acceptance':
+                sortStage = { acceptance_rate: -1, total_frequency: -1 };
+                break;
+            case 'difficulty':
+                sortStage = { difficulty: 1, total_frequency: -1 };
+                break;
+            default:
+                sortStage = { priority_score: -1, total_frequency: -1 };
+        }
+        pipeline.push({ $sort: sortStage });
+
+        // Add pagination
+        pipeline.push({ $skip: filters.offset });
+        pipeline.push({ $limit: filters.limit });
+
+        console.log("Executing pipeline with", pipeline.length, "stages");
+
+        // Execute the aggregation
+        const questions = await questionsCollection.aggregate(pipeline).toArray();
+        console.log("Questions found:", questions.length);
+
+        // Get company statistics
+        const companyStats = await questionsAskedCollection.aggregate([
+            {
+                $group: {
+                    _id: "$company",
+                    total_questions: { $sum: 1 },
+                    avg_frequency: { $avg: "$frequency" },
+                    recent_questions: {
+                        $sum: {
+                            $cond: [
+                                { $in: ["$time_period", ["Last 30 Days", "Last 3 Months"]] },
+                                1,
+                                0
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    company_tier: {
+                        $cond: {
+                            if: { $in: ["$_id", TIER_1_COMPANIES] },
+                            then: "Tier 1",
+                            else: {
+                                $cond: {
+                                    if: { $in: ["$_id", TIER_2_COMPANIES] },
+                                    then: "Tier 2",
+                                    else: "Tier 3"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $sort: {
+                    company_tier: 1,
+                    total_questions: -1
+                }
+            }
+        ]).toArray();
+
+        console.log("Company stats found:", companyStats.length);
+
+        // Get correct statistics
+        const totalUniqueQuestions = await questionsCollection.countDocuments();
+        
+        // Get total question-company combinations (not unique questions)
+        const totalQuestionCompanyCombinations = await questionsAskedCollection.countDocuments();
+        
+        // Get recent questions count (unique questions asked in last 3 months)
+        const recentQuestionsCount = await questionsAskedCollection.aggregate([
+            {
+                $match: {
+                    time_period: { $in: ["Last 30 Days", "Last 3 Months"] }
+                }
+            },
+            {
+                $group: {
+                    _id: "$question_id"
+                }
+            },
+            {
+                $count: "uniqueRecentQuestions"
+            }
+        ]).toArray();
+
+        const recentQuestions = recentQuestionsCount.length > 0 ? recentQuestionsCount[0].uniqueRecentQuestions : 0;
+
+        // Get difficulty and topic stats
+        const difficultyStats = await questionsCollection.aggregate([
+            {
+                $group: {
+                    _id: "$difficulty",
+                    count: { $sum: 1 }
+                }
+            }
+        ]).toArray();
+
+        const topicStats = await questionsCollection.aggregate([
+            { $unwind: { path: "$topics", preserveNullAndEmptyArrays: true } },
+            { $match: { topics: { $ne: null } } },
+            {
+                $group: {
+                    _id: "$topics",
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { count: -1 } },
+            { $limit: 20 }
+        ]).toArray();
+
+        // Get total count for pagination
+        const countPipeline = pipeline.slice(0, -2); // Remove skip and limit
+        const totalResults = await questionsCollection.aggregate([
+            ...countPipeline,
+            { $count: "total" }
+        ]).toArray();
+        
+        const totalQuestions = totalResults.length > 0 ? totalResults[0].total : 0;
+
+        const response = {
+            questions: questions.map(q => ({
+                id: q.question_id,
+                title: q.title,
+                difficulty: q.difficulty,
+                frequency: q.total_frequency, // Total frequency across all companies
+                acceptance: q.acceptance_rate || 50,
+                link: q.leetcode_link,
+                
+                // Primary company (highest frequency or tier)
+                company: q.companies.sort((a: any, b: any) => {
+                    const tierDiff = (a.tier === "Tier 1" ? 1 : a.tier === "Tier 2" ? 2 : 3) - 
+                                   (b.tier === "Tier 1" ? 1 : b.tier === "Tier 2" ? 2 : 3);
+                    return tierDiff !== 0 ? tierDiff : b.frequency - a.frequency;
+                })[0]?.name || 'Unknown',
+                
+                // All companies that asked this question
+                companies: q.companies.map((c: any) => ({
+                    name: c.name,
+                    frequency: c.frequency,
+                    tier: c.tier,
+                    timePeriod: c.time_period
+                })),
+                
+                companyCount: q.company_count,
+                timeFrame: q.companies[0]?.time_period || 'All Time',
+                topics: q.topics || [],
+                companyTier: q.company_tier,
+                priorityScore: q.priority_score,
+                recencyScore: q.recency_score,
+                isCompleted: false
+            })),
+            companies: companyStats.map(c => ({
+                name: c._id,
+                totalQuestions: c.total_questions,
+                avgFrequency: Math.round((c.avg_frequency || 0) * 10) / 10,
+                recentQuestions: c.recent_questions || 0,
+                tier: c.company_tier,
+                completedQuestions: 0
+            })),
+            stats: {
+                totalQuestions: totalUniqueQuestions,
+                totalCombinations: totalQuestionCompanyCombinations,
+                recentQuestions: recentQuestions,
+                topicDistribution: topicStats,
+                difficultyDistribution: difficultyStats,
+                tier1Companies: TIER_1_COMPANIES,
+                tier2Companies: TIER_2_COMPANIES
+            },
+            pagination: {
+                total: totalQuestions,
+                limit: filters.limit,
+                offset: filters.offset,
+                hasMore: filters.offset + filters.limit < totalQuestions
+            }
+        };
+
+        console.log("Returning response with", response.questions.length, "questions and", response.companies.length, "companies");
+        return NextResponse.json(response);
 
     } catch (error) {
         console.error("Interview prep API error:", error);
-        
-        // Return more specific error messages
-        if (error instanceof Error) {
-            if (error.name === 'AbortError') {
-                return NextResponse.json({ 
-                    error: "Request timeout. Please try again." 
-                }, { status: 408 });
-            }
-            
-            if (error.message.includes('fetch')) {
-                return NextResponse.json({ 
-                    error: "Network error. Please check your connection." 
-                }, { status: 503 });
-            }
-        }
-        
         return NextResponse.json({ 
-            error: "Internal server error" 
+            error: "Internal server error", 
+            details: error instanceof Error ? error.message : String(error)
         }, { status: 500 });
     }
-}
-
-// Helper functions remain the same
-function parseCSV(csvText: string): CSVRow[] {
-    const lines = csvText.split('\n').filter(line => line.trim());
-    if (lines.length < 2) return [];
-
-    const headerLine = lines[0];
-    const rows: CSVRow[] = [];
-
-    // Simple CSV parsing - split by comma and handle quotes
-    for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
-        if (values.length >= 4) { // Ensure minimum required columns
-            rows.push({
-                Difficulty: values[0] || '',
-                Title: values[1] || '',
-                Frequency: values[2] || '0',
-                Acceptance: values[3] || '0',
-                Link: values[4] || ''
-            });
-        }
-    }
-
-    return rows;
-}
-
-function normalizeDifficulty(difficulty: string): string {
-    const normalized = difficulty?.toLowerCase().trim();
-    if (normalized === 'easy' || normalized === '1') return 'Easy';
-    if (normalized === 'medium' || normalized === '2') return 'Medium';
-    if (normalized === 'hard' || normalized === '3') return 'Hard';
-    return 'Medium'; // Default fallback
-}
-
-function formatCompanyName(name: string): string {
-    return name.split('-').map(word => 
-        word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-}
-
-function getTimeFrameFromFileName(fileName: string): string {
-    const mapping: Record<string, string> = {
-        '1. Thirty Days.csv': 'Last 30 Days',
-        '2. Three Months.csv': 'Last 3 Months',
-        '3. Six Months.csv': 'Last 6 Months',
-        '4. More Than Six Months.csv': '6+ Months Ago',
-        '5. All.csv': 'All Time'
-    };
-    return mapping[fileName] || 'Unknown';
-}
-
-function getCompanyLogo(companyName: string): string {
-    const logos: Record<string, string> = {
-        'amd': '💻',
-        'google': '🔍',
-        'meta': '👤',
-        'amazon': '📦',
-        'apple': '🍎',
-        'microsoft': '🪟',
-        'netflix': '🎬',
-        'adobe': '🔴',
-        'uber': '🚗',
-        'tesla': '⚡'
-    };
-    return logos[companyName.toLowerCase()] || '🏢';
-}
-
-function calculateAverageDifficulty(questions: any[]): string {
-    if (questions.length === 0) return 'Medium';
-    
-    const difficultyScores = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
-    const totalScore = questions.reduce((sum, q) => sum + (difficultyScores[q.difficulty as keyof typeof difficultyScores] || 2), 0);
-    const avgScore = totalScore / questions.length;
-    
-    if (avgScore < 1.5) return 'Easy';
-    if (avgScore < 2.5) return 'Medium';
-    return 'Hard';
-}
-
-function removeDuplicateQuestions(questions: any[]): any[] {
-    const seen = new Set();
-    return questions.filter(q => {
-        const key = `${q.title}-${q.company}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-    });
 }

@@ -45,7 +45,8 @@ import {
     Activity,
     ChevronDown,
     ChevronUp,
-    Grid3X3
+    Grid3X3,
+    Archive
 } from "lucide-react";
 
 interface InterviewQuestion {
@@ -55,19 +56,46 @@ interface InterviewQuestion {
     frequency: number;
     acceptance: number;
     link: string;
-    company: string;
+    company: string; // Primary company
+    companies: Array<{
+        name: string;
+        frequency: number;
+        tier: string;
+        timePeriod: string;
+    }>; // All companies that asked this question
+    companyCount: number;
     timeFrame: string;
+    topics: string[];
+    companyTier: 'Tier 1' | 'Tier 2' | 'Tier 3';
+    priorityScore: number;
+    recencyScore: number;
     isCompleted: boolean;
-    completedAt?: string;
 }
 
 interface CompanyData {
     name: string;
-    logo: string;
     totalQuestions: number;
+    avgFrequency: number;
+    recentQuestions: number;
+    tier: 'Tier 1' | 'Tier 2' | 'Tier 3';
     completedQuestions: number;
-    averageDifficulty: string;
-    lastUpdated: string;
+}
+
+interface StatsData {
+    totalQuestions: number;
+    totalCombinations: number;
+    recentQuestions: number;
+    topicDistribution: Array<{ _id: string, count: number }>;
+    difficultyDistribution: Array<{ _id: string, count: number }>;
+    tier1Companies: string[];
+    tier2Companies: string[];
+}
+
+interface PaginationData {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
 }
 
 interface InterviewPrepProps {
@@ -77,7 +105,7 @@ interface InterviewPrepProps {
 // Lucide icons mapping for companies
 const getCompanyIcon = (companyName: string) => {
     const name = companyName.toLowerCase();
-    
+
     // Tech Giants
     if (name.includes('google')) return Globe;
     if (name.includes('meta') || name.includes('facebook')) return Users;
@@ -88,44 +116,44 @@ const getCompanyIcon = (companyName: string) => {
     if (name.includes('tesla')) return Car;
     if (name.includes('uber')) return Car;
     if (name.includes('adobe')) return Layers;
-    
+
     // Financial/Fintech
     if (name.includes('goldman') || name.includes('jpmorgan') || name.includes('bank')) return Briefcase;
     if (name.includes('stripe') || name.includes('square') || name.includes('paypal')) return CreditCard;
     if (name.includes('visa') || name.includes('mastercard')) return CreditCard;
     if (name.includes('affirm') || name.includes('klarna')) return CreditCard;
-    
+
     // Gaming/Entertainment
     if (name.includes('activision') || name.includes('blizzard') || name.includes('riot')) return Gamepad2;
     if (name.includes('spotify') || name.includes('soundcloud')) return Music;
     if (name.includes('tiktok') || name.includes('youtube')) return Video;
-    
+
     // Cloud/Infrastructure
     if (name.includes('aws') || name.includes('azure') || name.includes('gcp')) return Cloud;
     if (name.includes('databricks') || name.includes('snowflake')) return Database;
     if (name.includes('cloudflare') || name.includes('akamai')) return Shield;
-    
+
     // Hardware/Semiconductor
     if (name.includes('nvidia') || name.includes('amd') || name.includes('intel')) return Cpu;
     if (name.includes('qualcomm') || name.includes('broadcom')) return Cpu;
-    
+
     // Social/Communication
     if (name.includes('slack') || name.includes('discord') || name.includes('zoom')) return Users;
     if (name.includes('twitter') || name.includes('linkedin')) return Users;
-    
+
     // E-commerce/Retail
     if (name.includes('shopify') || name.includes('ebay') || name.includes('etsy')) return ShoppingCart;
     if (name.includes('doordash') || name.includes('instacart')) return ShoppingCart;
-    
+
     // Consulting/Services
     if (name.includes('accenture') || name.includes('deloitte')) return Briefcase;
     if (name.includes('mckinsey') || name.includes('bain')) return Briefcase;
-    
+
     // Startups/Unicorns
     if (name.includes('airbnb')) return Building;
     if (name.includes('coinbase') || name.includes('crypto')) return CreditCard;
     if (name.includes('robinhood')) return TrendingUp;
-    
+
     // Default
     return Building;
 };
@@ -147,81 +175,96 @@ const timeFrameMapping: Record<string, string> = {
 export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
     const [questions, setQuestions] = useState<InterviewQuestion[]>([]);
     const [companies, setCompanies] = useState<CompanyData[]>([]);
+    const [stats, setStats] = useState<StatsData | null>(null);
+    const [pagination, setPagination] = useState<PaginationData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+
+    // Filters
     const [selectedCompany, setSelectedCompany] = useState<string>('all');
     const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
-    const [selectedTimeFrame, setSelectedTimeFrame] = useState<string>('all');
+    const [selectedTimeFrame, setSelectedTimeFrame] = useState<string>('Last 30 Days');
+    const [selectedTier, setSelectedTier] = useState<string>('all');
+    const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+    const [minFrequency, setMinFrequency] = useState<number>(0);
     const [searchQuery, setSearchQuery] = useState('');
+    const [sortBy, setSortBy] = useState<'frequency' | 'recent' | 'acceptance' | 'difficulty'>('recent');
+
+    // UI State
     const [showCompleted, setShowCompleted] = useState(true);
-    const [sortBy, setSortBy] = useState<'frequency' | 'difficulty' | 'acceptance'>('frequency');
     const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(new Set());
     const [showAllCompanies, setShowAllCompanies] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [view, setView] = useState<'all' | 'tier1' | 'tier2' | 'popular'>('popular');
 
-    // Memoized filtered and sorted questions
-    const filteredAndSortedQuestions = useMemo(() => {
-        const filtered = questions.filter(q => {
-            const companyMatch = selectedCompany === 'all' || q.company === selectedCompany;
-            const difficultyMatch = selectedDifficulty === 'all' || q.difficulty.toLowerCase() === selectedDifficulty.toLowerCase();
-            const timeFrameMatch = selectedTimeFrame === 'all' || q.timeFrame === selectedTimeFrame;
-            const searchMatch = searchQuery === '' || 
-                q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                q.company.toLowerCase().includes(searchQuery.toLowerCase());
-            const completedMatch = showCompleted || !completedQuestions.has(q.id);
-            
-            return companyMatch && difficultyMatch && timeFrameMatch && searchMatch && completedMatch;
-        });
-
-        return filtered.sort((a, b) => {
-            switch (sortBy) {
-                case 'frequency':
-                    return b.frequency - a.frequency;
-                case 'difficulty':
-                    const difficultyOrder = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
-                    return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
-                case 'acceptance':
-                    return b.acceptance - a.acceptance;
-                default:
-                    return 0;
-            }
-        });
-    }, [questions, selectedCompany, selectedDifficulty, selectedTimeFrame, searchQuery, showCompleted, completedQuestions, sortBy]);
-
-    // Memoized stats
-    const stats = useMemo(() => {
-        const totalQuestions = questions.length;
-        const totalCompleted = completedQuestions.size;
-        const completionPercentage = totalQuestions > 0 ? (totalCompleted / totalQuestions) * 100 : 0;
-
-        const difficultyStats = {
-            easy: questions.filter(q => completedQuestions.has(q.id) && q.difficulty === 'Easy').length,
-            medium: questions.filter(q => completedQuestions.has(q.id) && q.difficulty === 'Medium').length,
-            hard: questions.filter(q => completedQuestions.has(q.id) && q.difficulty === 'Hard').length
-        };
-
-        return { totalQuestions, totalCompleted, completionPercentage, difficultyStats };
-    }, [questions, completedQuestions]);
-
-    // Companies to display
+    // Remove old memoized calculations since we now get data from API
+    // Companies to display 
     const displayedCompanies = showAllCompanies ? companies : companies.slice(0, 12);
 
-    const fetchInterviewData = useCallback(async (forceRefresh = false) => {
+    const fetchInterviewData = useCallback(async (append = false, forceRefresh = false) => {
         try {
+            if (!append) {
+                setLoading(true);
+            } else {
+                setLoadingMore(true);
+            }
+
             setRefreshing(forceRefresh);
-            const response = await fetch('/api/interview-prep/questions');
-            
+
+            // Build query parameters
+            const params = new URLSearchParams();
+            if (selectedCompany !== 'all') params.set('company', selectedCompany);
+            if (selectedDifficulty !== 'all') params.set('difficulty', selectedDifficulty);
+            if (selectedTimeFrame !== 'all') params.set('time_period', selectedTimeFrame);
+            if (selectedTopics.length > 0) params.set('topics', selectedTopics.join(','));
+            if (minFrequency > 0) params.set('min_frequency', minFrequency.toString());
+            if (searchQuery) params.set('search', searchQuery);
+            params.set('sort_by', sortBy);
+            params.set('limit', '50');
+            params.set('offset', append ? questions.length.toString() : '0');
+
+            // Apply view-based filters
+            if (view === 'tier1' && selectedCompany === 'all') {
+                // Will be handled by tier filtering in backend
+            }
+
+            const response = await fetch(`/api/interview-prep/questions?${params.toString()}`);
+
             if (response.ok) {
                 const data = await response.json();
-                setQuestions(data.questions);
-                setCompanies(data.companies);
+
+                if (append) {
+                    setQuestions(prev => [...prev, ...data.questions]);
+                } else {
+                    setQuestions(data.questions);
+                    setCompanies(data.companies);
+                    setStats(data.stats);
+                }
+
+                setPagination(data.pagination);
+
+                // Update completion status
+                const updatedQuestions = (append ? [...questions, ...data.questions] : data.questions).map((q: InterviewQuestion) => ({
+                    ...q,
+                    isCompleted: completedQuestions.has(q.id)
+                }));
+
+                setQuestions(updatedQuestions);
             }
         } catch (error) {
             console.error("Error fetching interview data:", error);
         } finally {
             setLoading(false);
+            setLoadingMore(false);
             setRefreshing(false);
         }
-    }, []);
+    }, [selectedCompany, selectedDifficulty, selectedTimeFrame, selectedTopics, minFrequency, searchQuery, sortBy, view, questions.length, completedQuestions]);
+
+    const loadMore = useCallback(() => {
+        if (pagination?.hasMore && !loadingMore) {
+            fetchInterviewData(true);
+        }
+    }, [pagination?.hasMore, loadingMore, fetchInterviewData]);
 
     const fetchUserProgress = useCallback(async () => {
         try {
@@ -262,10 +305,18 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
         }
     }, [completedQuestions, userEmail]);
 
+    // Trigger new search when filters change
     useEffect(() => {
-        fetchInterviewData();
+        const timeoutId = setTimeout(() => {
+            fetchInterviewData();
+        }, 300); // Debounce search
+
+        return () => clearTimeout(timeoutId);
+    }, [selectedCompany, selectedDifficulty, selectedTimeFrame, selectedTier, selectedTopics, minFrequency, searchQuery, sortBy, view]);
+
+    useEffect(() => {
         fetchUserProgress();
-    }, [fetchInterviewData, fetchUserProgress]);
+    }, [fetchUserProgress]);
 
     if (loading) {
         return (
@@ -289,10 +340,10 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                                 Interview Preparation
                             </h1>
                             <p className="text-slate-400 mt-1">
-                                Real interview questions from {companies.length}+ companies • Live data from GitHub
+                                Smart interview preparation with {companies.length}+ companies • MongoDB-powered analytics
                             </p>
                         </div>
-                        
+
                         <div className="flex items-center space-x-4">
                             <Button
                                 onClick={() => fetchInterviewData(true)}
@@ -308,25 +359,32 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
             </div>
 
             <div className="max-w-7xl mx-auto p-6 space-y-6">
-                {/* Progress Overview */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Enhanced Progress Overview */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     <Card className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/20">
                         <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-purple-300 text-sm font-medium">Total Progress</p>
+                                    <p className="text-purple-300 text-sm font-medium">Your Progress</p>
                                     <p className="text-2xl font-bold text-white">
-                                        {stats.totalCompleted}/{stats.totalQuestions}
+                                        {stats?.totalQuestions ? Math.round((completedQuestions.size / stats.totalQuestions) * 100) : 0}%
                                     </p>
-                                    <p className="text-xs text-slate-400">{stats.completionPercentage.toFixed(1)}% Complete</p>
+                                    <p className="text-xs text-slate-400">{completedQuestions.size} completed</p>
                                 </div>
                                 <Target className="w-8 h-8 text-purple-400" />
                             </div>
-                            <div className="mt-3 w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-                                <div 
-                                    className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
-                                    style={{ width: `${stats.completionPercentage}%` }}
-                                />
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/20">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-blue-300 text-sm font-medium">Total Questions</p>
+                                    <p className="text-2xl font-bold text-white">{stats?.totalQuestions?.toLocaleString() || 0}</p>
+                                    <p className="text-xs text-slate-400">Across {companies.length} companies</p>
+                                </div>
+                                <BarChart3 className="w-8 h-8 text-blue-400" />
                             </div>
                         </CardContent>
                     </Card>
@@ -335,10 +393,11 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                         <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-green-300 text-sm font-medium">Easy</p>
-                                    <p className="text-2xl font-bold text-white">{stats.difficultyStats.easy}</p>
+                                    <p className="text-green-300 text-sm font-medium">Tier 1 Companies</p>
+                                    <p className="text-2xl font-bold text-white">{stats?.tier1Companies?.length || 0}</p>
+                                    <p className="text-xs text-slate-400">FAANG+ companies</p>
                                 </div>
-                                <CheckCircle className="w-8 h-8 text-green-400" />
+                                <Star className="w-8 h-8 text-green-400" />
                             </div>
                         </CardContent>
                     </Card>
@@ -347,8 +406,11 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                         <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-yellow-300 text-sm font-medium">Medium</p>
-                                    <p className="text-2xl font-bold text-white">{stats.difficultyStats.medium}</p>
+                                    <p className="text-yellow-300 text-sm font-medium">Recent Questions</p>
+                                    <p className="text-2xl font-bold text-white">
+                                        {stats?.recentQuestions || 0}
+                                    </p>
+                                    <p className="text-xs text-slate-400">Last 3 months</p>
                                 </div>
                                 <TrendingUp className="w-8 h-8 text-yellow-400" />
                             </div>
@@ -359,22 +421,25 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                         <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-red-300 text-sm font-medium">Hard</p>
-                                    <p className="text-2xl font-bold text-white">{stats.difficultyStats.hard}</p>
+                                    <p className="text-red-300 text-sm font-medium">Avg Frequency</p>
+                                    <p className="text-2xl font-bold text-white">
+                                        {companies.length > 0 ? Math.round(companies.reduce((acc, c) => acc + c.avgFrequency, 0) / companies.length) : 0}
+                                    </p>
+                                    <p className="text-xs text-slate-400">Per company</p>
                                 </div>
-                                <Star className="w-8 h-8 text-red-400" />
+                                <Activity className="w-8 h-8 text-red-400" />
                             </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Companies Grid */}
+                {/* Enhanced Companies Grid */}
                 <Card className="bg-slate-800/50 border-slate-700/50">
                     <CardHeader>
                         <CardTitle className="text-white flex items-center justify-between">
                             <div className="flex items-center">
                                 <Building className="w-5 h-5 mr-2 text-blue-400" />
-                                Companies ({companies.length})
+                                Companies by Tier
                             </div>
                             {companies.length > 12 && (
                                 <Button
@@ -390,46 +455,59 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                            {displayedCompanies.map((company) => {
-                                const IconComponent = getCompanyIcon(company.name);
-                                return (
-                                    <motion.div
-                                        key={company.name}
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        onClick={() => setSelectedCompany(company.name)}
-                                        className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                                            selectedCompany === company.name 
-                                                ? 'border-purple-500/50 bg-purple-500/20' 
-                                                : 'border-slate-700/50 bg-slate-700/20 hover:border-slate-600/50'
-                                        }`}
-                                    >
-                                        <div className="text-center">
-                                            <IconComponent className="w-6 h-6 mx-auto mb-2 text-blue-400" />
-                                            <p className="text-sm font-medium text-white truncate">{company.name}</p>
-                                            <p className="text-xs text-slate-400">{company.totalQuestions} questions</p>
-                                            <div className="text-xs text-green-400 mt-1">
-                                                {company.completedQuestions}/{company.totalQuestions} done
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                );
-                            })}
+                        {/* Tier 1 Companies */}
+                        <div className="mb-6">
+                            <h4 className="text-green-400 font-semibold mb-3 flex items-center">
+                                <Star className="w-4 h-4 mr-2" />
+                                Tier 1 - FAANG+ ({companies.filter(c => c.tier === 'Tier 1').length})
+                            </h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                                {companies.filter(c => c.tier === 'Tier 1').slice(0, showAllCompanies ? undefined : 6).map((company) => (
+                                    <CompanyCard key={company.name} company={company} selectedCompany={selectedCompany} setSelectedCompany={setSelectedCompany} />
+                                ))}
+                            </div>
                         </div>
+
+                        {/* Tier 2 Companies */}
+                        <div className="mb-6">
+                            <h4 className="text-blue-400 font-semibold mb-3 flex items-center">
+                                <TrendingUp className="w-4 h-4 mr-2" />
+                                Tier 2 - Unicorns & Finance ({companies.filter(c => c.tier === 'Tier 2').length})
+                            </h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                                {companies.filter(c => c.tier === 'Tier 2').slice(0, showAllCompanies ? undefined : 6).map((company) => (
+                                    <CompanyCard key={company.name} company={company} selectedCompany={selectedCompany} setSelectedCompany={setSelectedCompany} />
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Tier 3 Companies - Only show if expanded */}
+                        {showAllCompanies && (
+                            <div>
+                                <h4 className="text-slate-400 font-semibold mb-3 flex items-center">
+                                    <Building className="w-4 h-4 mr-2" />
+                                    Other Companies ({companies.filter(c => c.tier === 'Tier 3').length})
+                                </h4>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-8 gap-2">
+                                    {companies.filter(c => c.tier === 'Tier 3').map((company) => (
+                                        <CompanyCard key={company.name} company={company} selectedCompany={selectedCompany} setSelectedCompany={setSelectedCompany} compact />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 
-                {/* Filters */}
+                {/* Enhanced Filters */}
                 <Card className="bg-slate-800/50 border-slate-700/50">
                     <CardContent className="p-4">
-                        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                        <div className="flex flex-col gap-4">
                             {/* Search */}
                             <div className="flex-1">
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
                                     <Input
-                                        placeholder="Search questions or companies..."
+                                        placeholder="Search questions, companies, or topics..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400"
@@ -437,17 +515,57 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                                 </div>
                             </div>
 
-                            {/* Filters */}
-                            <div className="flex flex-wrap gap-2">
+                            {/* Primary Filters */}
+                            <div className="flex flex-wrap gap-3">
                                 <select
                                     value={selectedCompany}
                                     onChange={(e) => setSelectedCompany(e.target.value)}
                                     className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 >
                                     <option value="all">All Companies</option>
-                                    {companies.map(company => (
-                                        <option key={company.name} value={company.name}>{company.name}</option>
-                                    ))}
+                                    <optgroup label="Tier 1 - FAANG+">
+                                        {companies.filter(c => c.tier === 'Tier 1').map(company => (
+                                            <option key={company.name} value={company.name}>
+                                                {company.name} ({company.recentQuestions} recent)
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                    <optgroup label="Tier 2 - Unicorns">
+                                        {companies.filter(c => c.tier === 'Tier 2').map(company => (
+                                            <option key={company.name} value={company.name}>
+                                                {company.name} ({company.recentQuestions} recent)
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                    {showAllCompanies && (
+                                        <optgroup label="Other Companies">
+                                            {companies.filter(c => c.tier === 'Tier 3').map(company => (
+                                                <option key={company.name} value={company.name}>
+                                                    {company.name}
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                    )}
+                                </select>
+
+                                <select
+                                    value={selectedTimeFrame}
+                                    onChange={(e) => setSelectedTimeFrame(e.target.value)}
+                                    className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                >
+                                    <option value="all">All Time Periods</option>
+                                    <option value="Last 30 Days">
+                                        Last 30 Days
+                                    </option>
+                                    <option value="Last 3 Months">
+                                        Last 3 Months
+                                    </option>
+                                    <option value="Last 6 Months">
+                                        Last 6 Months
+                                    </option>
+                                    <option value="6+ Months Ago">
+                                        6+ Months Ago
+                                    </option>
                                 </select>
 
                                 <select
@@ -456,20 +574,15 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                                     className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 >
                                     <option value="all">All Difficulties</option>
-                                    <option value="easy">Easy</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="hard">Hard</option>
-                                </select>
-
-                                <select
-                                    value={selectedTimeFrame}
-                                    onChange={(e) => setSelectedTimeFrame(e.target.value)}
-                                    className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                >
-                                    <option value="all">All Time</option>
-                                    {Object.values(timeFrameMapping).map(timeFrame => (
-                                        <option key={timeFrame} value={timeFrame}>{timeFrame}</option>
-                                    ))}
+                                    <option value="easy">
+                                        Easy
+                                    </option>
+                                    <option value="medium">
+                                        Medium
+                                    </option>
+                                    <option value="hard">
+                                        Hard
+                                    </option>
                                 </select>
 
                                 <select
@@ -477,10 +590,35 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                                     onChange={(e) => setSortBy(e.target.value as any)}
                                     className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 >
-                                    <option value="frequency">Sort by Frequency</option>
-                                    <option value="difficulty">Sort by Difficulty</option>
-                                    <option value="acceptance">Sort by Acceptance</option>
+                                    <option value="recent">
+                                        Most Recent
+                                    </option>
+                                    <option value="frequency">
+                                        Highest Frequency
+                                    </option>
+                                    <option value="acceptance">
+                                        Acceptance Rate
+                                    </option>
+                                    <option value="difficulty">
+                                        Difficulty
+                                    </option>
                                 </select>
+                            </div>
+
+                            {/* Advanced Filters */}
+                            <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-700">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-sm text-slate-300">Min Frequency:</label>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        value={minFrequency}
+                                        onChange={(e) => setMinFrequency(parseInt(e.target.value))}
+                                        className="w-20"
+                                    />
+                                    <span className="text-sm text-slate-400 w-8">{minFrequency}</span>
+                                </div>
 
                                 <Button
                                     variant="outline"
@@ -491,38 +629,53 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                                     {showCompleted ? <Eye className="w-4 h-4 mr-1" /> : <EyeOff className="w-4 h-4 mr-1" />}
                                     {showCompleted ? 'Hide' : 'Show'} Completed
                                 </Button>
+
+                                <div className="text-sm text-slate-400">
+                                    Showing {questions.length} questions
+                                    {pagination && ` of ${pagination.total.toLocaleString()}`}
+                                </div>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Questions List */}
+                {/* Enhanced Questions List */}
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
                         <h3 className="text-xl font-semibold text-white">
-                            Questions ({filteredAndSortedQuestions.length})
+                            Questions ({questions.length})
                         </h3>
-                        <div className="text-sm text-slate-400">
-                            Showing {filteredAndSortedQuestions.length} of {questions.length} questions
+                        <div className="flex items-center gap-3">
+                            <div className="text-sm text-slate-400">
+                                {pagination && `Page ${Math.floor(pagination.offset / 50) + 1} of ${Math.ceil(pagination.total / 50)}`}
+                            </div>
+                            <Button
+                                onClick={() => fetchInterviewData(false, true)}
+                                disabled={refreshing}
+                                size="sm"
+                                className="bg-purple-600 hover:bg-purple-700"
+                            >
+                                <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                                Refresh
+                            </Button>
                         </div>
                     </div>
 
                     <AnimatePresence>
-                        {filteredAndSortedQuestions.map((question, index) => {
+                        {questions.map((question, index) => {
                             const isCompleted = completedQuestions.has(question.id);
                             const IconComponent = getCompanyIcon(question.company);
-                            
+
                             return (
                                 <motion.div
-                                    key={question.id}
+                                    key={`${question.id}-${question.company}-${question.timeFrame}`}
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -20 }}
-                                    transition={{ delay: index * 0.02 }}
+                                    transition={{ delay: index * 0.01 }}
                                 >
-                                    <Card className={`border transition-all hover:border-purple-500/50 ${
-                                        isCompleted ? 'bg-green-500/10 border-green-500/20' : 'bg-slate-800/50 border-slate-700/50'
-                                    }`}>
+                                    <Card className={`border transition-all hover:border-purple-500/50 ${isCompleted ? 'bg-green-500/10 border-green-500/20' : 'bg-slate-800/50 border-slate-700/50'
+                                        }`}>
                                         <CardContent className="p-4">
                                             <div className="flex items-start justify-between">
                                                 <div className="flex items-start space-x-3 flex-1 min-w-0">
@@ -547,29 +700,96 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                                                             <Badge className={`text-xs ${difficultyColors[question.difficulty]} flex-shrink-0`}>
                                                                 {question.difficulty}
                                                             </Badge>
+
+                                                            {/* Company Tier Badge */}
+                                                            <Badge className={`text-xs flex-shrink-0 ${question.companyTier === 'Tier 1' ? 'bg-green-500/20 text-green-400 border-green-500/50' :
+                                                                question.companyTier === 'Tier 2' ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' :
+                                                                    'bg-slate-500/20 text-slate-400 border-slate-500/50'
+                                                                }`}>
+                                                                {question.companyTier}
+                                                            </Badge>
+
+                                                            {/* High Priority Indicator */}
+                                                            {question.priorityScore > 100 && (
+                                                                <Badge className="text-xs bg-orange-500/20 text-orange-400 border-orange-500/50 flex items-center">
+                                                                    <Zap className="w-3 h-3 mr-1" />
+                                                                    Hot
+                                                                </Badge>
+                                                            )}
                                                         </div>
 
-                                                        <div className="flex flex-wrap items-center gap-3 text-sm">
+                                                        <div className="flex flex-wrap items-center gap-3 text-sm mb-2">
                                                             <div className="flex items-center text-slate-400">
                                                                 <IconComponent className="w-4 h-4 mr-1" />
                                                                 {question.company}
                                                             </div>
-                                                            
+
                                                             <div className="flex items-center text-blue-400">
                                                                 <TrendingUp className="w-4 h-4 mr-1" />
                                                                 Frequency: {question.frequency}
                                                             </div>
-                                                            
+
                                                             <div className="flex items-center text-green-400">
                                                                 <BarChart3 className="w-4 h-4 mr-1" />
                                                                 {question.acceptance}% Acceptance
                                                             </div>
-                                                            
+
                                                             <div className="flex items-center text-orange-400">
                                                                 <Calendar className="w-4 h-4 mr-1" />
                                                                 {question.timeFrame}
                                                             </div>
+
+                                                            <div className="flex items-center text-purple-400">
+                                                                <Star className="w-4 h-4 mr-1" />
+                                                                Score: {Math.round(question.priorityScore)}
+                                                            </div>
                                                         </div>
+
+                                                        {/* All Companies Breakdown - Always show if exists */}
+                                                        {question.companies && question.companies.length > 0 && (
+                                                            <div className="mb-2">
+                                                                <p className="text-xs text-slate-500 mb-1">
+                                                                    Asked by {question.companies.length} companies:
+                                                                </p>
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {question.companies.slice(0, 8).map((company, idx) => (
+                                                                        <Badge
+                                                                            key={`${company.name}-${idx}`}
+                                                                            className={`text-xs ${company.tier === 'Tier 1' ? 'bg-green-500/20 text-green-400 border-green-500/50' :
+                                                                                    company.tier === 'Tier 2' ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' :
+                                                                                        'bg-slate-500/20 text-slate-400 border-slate-500/50'
+                                                                                }`}
+                                                                        >
+                                                                            {company.name} ({company.frequency})
+                                                                        </Badge>
+                                                                    ))}
+                                                                    {question.companies.length > 8 && (
+                                                                        <Badge className="text-xs bg-slate-500/20 text-slate-400">
+                                                                            +{question.companies.length - 8} more
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Topics */}
+                                                        {question.topics && question.topics.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                                {question.topics.slice(0, 4).map(topic => (
+                                                                    <Badge
+                                                                        key={topic}
+                                                                        className="text-xs bg-purple-500/20 text-purple-300 border-purple-500/30"
+                                                                    >
+                                                                        {topic.replace('_', ' ')}
+                                                                    </Badge>
+                                                                ))}
+                                                                {question.topics.length > 4 && (
+                                                                    <Badge className="text-xs bg-slate-500/20 text-slate-400">
+                                                                        +{question.topics.length - 4} more
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
 
@@ -589,7 +809,31 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                         })}
                     </AnimatePresence>
 
-                    {filteredAndSortedQuestions.length === 0 && (
+                    {/* Load More Button */}
+                    {pagination?.hasMore && (
+                        <div className="flex justify-center py-6">
+                            <Button
+                                onClick={loadMore}
+                                disabled={loadingMore}
+                                className="bg-purple-600 hover:bg-purple-700"
+                            >
+                                {loadingMore ? (
+                                    <>
+                                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                        Loading...
+                                    </>
+                                ) : (
+                                    <>
+                                        <ChevronDown className="w-4 h-4 mr-2" />
+                                        Load More Questions
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* No Questions Found */}
+                    {questions.length === 0 && !loading && (
                         <Card className="bg-slate-800/50 border-slate-700/50">
                             <CardContent className="p-8 text-center">
                                 <Search className="w-12 h-12 text-slate-400 mx-auto mb-4" />
@@ -603,3 +847,58 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
         </div>
     );
 }
+
+// Company Card Component
+const CompanyCard = ({ company, selectedCompany, setSelectedCompany, compact = false }: {
+    company: CompanyData;
+    selectedCompany: string;
+    setSelectedCompany: (company: string) => void;
+    compact?: boolean;
+}) => {
+    const IconComponent = getCompanyIcon(company.name);
+    const isSelected = selectedCompany === company.name;
+
+    return (
+        <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setSelectedCompany(company.name)}
+            className={`${compact ? 'p-2' : 'p-3'} rounded-lg border cursor-pointer transition-all ${isSelected
+                ? 'border-purple-500/50 bg-purple-500/20'
+                : `border-slate-700/50 bg-slate-700/20 hover:border-slate-600/50 ${company.tier === 'Tier 1' ? 'hover:border-green-500/30' :
+                    company.tier === 'Tier 2' ? 'hover:border-blue-500/30' :
+                        'hover:border-slate-500/30'
+                }`
+                }`}
+        >
+            <div className="text-center">
+                <IconComponent className={`${compact ? 'w-4 h-4' : 'w-6 h-6'} mx-auto mb-1 ${company.tier === 'Tier 1' ? 'text-green-400' :
+                    company.tier === 'Tier 2' ? 'text-blue-400' :
+                        'text-slate-400'
+                    }`} />
+                <p className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-white truncate`}>
+                    {company.name}
+                </p>
+                {!compact && (
+                    <>
+                        <p className="text-xs text-slate-400">
+                            {company.totalQuestions} questions
+                        </p>
+                        <div className="text-xs mt-1">
+                            <span className="text-orange-400">{company.recentQuestions} recent</span>
+                            {company.avgFrequency > 0 && (
+                                <span className="text-slate-500 mx-1">•</span>
+                            )}
+                            {company.avgFrequency > 0 && (
+                                <span className="text-blue-400">avg {company.avgFrequency}</span>
+                            )}
+                        </div>
+                    </>
+                )}
+                {compact && (
+                    <p className="text-xs text-slate-500">{company.totalQuestions}</p>
+                )}
+            </div>
+        </motion.div>
+    );
+};
