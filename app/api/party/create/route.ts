@@ -1,11 +1,9 @@
-// app/api/party/create/route.ts - Enhanced with rate limiting and party limits
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
-import { partyCreationLimiter, RATE_LIMITS, getUserLimits } from "@/lib/rateLimit";
+import { canUserCreateParty, getUserTierLimits } from "@/lib/subscription";
 
-// Generate a unique party code
 function generatePartyCode(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let result = '';
@@ -22,135 +20,112 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { partyName, password, maxMembers } = await req.json();
+        const { name, password, maxMembers = 10 } = await req.json();
 
-        // Validation
-        if (!partyName || partyName.trim().length === 0) {
+        if (!name || name.trim().length === 0) {
             return NextResponse.json({ error: "Party name is required" }, { status: 400 });
         }
 
-        if (partyName.trim().length > 50) {
-            return NextResponse.json({ error: "Party name must be 50 characters or less" }, { status: 400 });
+        if (name.length > 50) {
+            return NextResponse.json({ error: "Party name too long" }, { status: 400 });
         }
 
-        if (password && password.length > 100) {
-            return NextResponse.json({ error: "Password must be 100 characters or less" }, { status: 400 });
-        }
-
-        if (maxMembers && (maxMembers < 2 || maxMembers > 50)) {
-            return NextResponse.json({ error: "Member limit must be between 2 and 50" }, { status: 400 });
+        if (maxMembers < 2 || maxMembers > 50) {
+            return NextResponse.json({ error: "Max members must be between 2 and 50" }, { status: 400 });
         }
 
         const db = await connectToDatabase();
-        const parties = db.collection("parties");
         const users = db.collection("users");
+        const parties = db.collection("parties");
 
-        // Get user profile and check if onboarded
-        const userProfile = await users.findOne({ email: session.user?.email });
-        if (!userProfile?.onboarded) {
-            return NextResponse.json({ error: "Please complete your profile setup first" }, { status: 400 });
+        // Get user with subscription info
+        const user = await users.findOne({ email: session.user.email });
+        if (!user) {
+            return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
 
-        // Check user limits
-        const userLimits = await getUserLimits(db, session.user.email);
+        if (!user.onboarded) {
+            return NextResponse.json({ error: "User not onboarded" }, { status: 400 });
+        }
+
+        // Check user's current party count (parties they've created)
+        const userCreatedPartyCount = await parties.countDocuments({
+            createdBy: session.user.email
+        });
+
+        const userTier = user.subscription?.tier || 'free';
         
-        if (userLimits.totalParties >= userLimits.maxParties) {
+        // Check if user can create more parties
+        if (!canUserCreateParty(userTier, userCreatedPartyCount)) {
+            const tierLimits = getUserTierLimits(userTier);
             return NextResponse.json({ 
-                error: `You can only be a member of up to ${userLimits.maxParties} parties` 
-            }, { status: 400 });
-        }
-
-        if (userLimits.createdParties >= userLimits.maxCreatedParties) {
-            return NextResponse.json({ 
-                error: `You can only create up to ${userLimits.maxCreatedParties} parties` 
-            }, { status: 400 });
-        }
-
-        // Rate limiting check
-        const rateLimitKey = `party-creation:${session.user.email}`;
-        const rateLimit = partyCreationLimiter.checkLimit(
-            rateLimitKey,
-            RATE_LIMITS.PARTY_CREATION.maxRequests,
-            RATE_LIMITS.PARTY_CREATION.windowMs
-        );
-
-        if (!rateLimit.allowed) {
-            const waitTime = Math.ceil((rateLimit.resetTime - Date.now()) / (1000 * 60 * 60)); // hours
-            return NextResponse.json({ 
-                error: `Rate limit exceeded. You can create ${RATE_LIMITS.PARTY_CREATION.maxRequests} parties per day. Try again in ${waitTime} hours.`,
-                waitTime
-            }, { status: 429 });
-        }
-
-        // Check if party name already exists
-        const existingParty = await parties.findOne({ name: partyName.trim() });
-        if (existingParty) {
-            return NextResponse.json({ error: "A party with this name already exists" }, { status: 409 });
+                error: "Party creation limit reached", 
+                limit: tierLimits.maxParties,
+                currentCount: userCreatedPartyCount,
+                upgradeRequired: true,
+                currentTier: userTier,
+                message: `You've reached your ${tierLimits.name} plan limit of ${tierLimits.maxParties} parties. Upgrade to create more!`
+            }, { status: 403 });
         }
 
         // Generate unique party code
-        let partyCode: string;
+        let code: string;
         let attempts = 0;
-        const maxAttempts = 10;
-
         do {
-            partyCode = generatePartyCode();
-            const existingCode = await parties.findOne({ code: partyCode });
-            if (!existingCode) break;
+            code = generatePartyCode();
+            const existingParty = await parties.findOne({ code });
+            if (!existingParty) break;
             attempts++;
-        } while (attempts < maxAttempts);
+        } while (attempts < 10);
 
-        if (attempts >= maxAttempts) {
-            return NextResponse.json({ 
-                error: "Failed to generate unique party code. Please try again." 
-            }, { status: 500 });
+        if (attempts >= 10) {
+            return NextResponse.json({ error: "Failed to generate unique party code" }, { status: 500 });
         }
 
+        // Create party
         const party = {
-            code: partyCode,
-            name: partyName.trim(),
-            password: password?.trim() || null,
-            maxMembers: maxMembers || null,
+            code,
+            name: name.trim(),
+            password: password || null,
+            maxMembers,
+            createdBy: session.user.email,
             createdAt: new Date(),
-            createdBy: session.user?.email || "",
             members: [
                 {
-                    email: session.user?.email || "",
-                    handle: userProfile.handle,
-                    leetcodeUsername: userProfile.leetcodeUsername,
-                    displayName: userProfile.displayName || userProfile.handle,
+                    email: session.user.email,
+                    name: user.name || session.user.name,
+                    handle: user.handle,
+                    displayName: user.displayName || user.handle,
                     joinedAt: new Date(),
                     isOwner: true,
-                    // Store the user's current stats as their initial stats for this party
-                    initialStats: userProfile.currentStats || { easy: 0, medium: 0, hard: 0, total: 0 },
-                    stats: userProfile.currentStats || { easy: 0, medium: 0, hard: 0, total: 0, lastUpdated: new Date() },
-                },
-            ],
+                    stats: user.currentStats || { easy: 0, medium: 0, hard: 0, total: 0 }
+                }
+            ]
         };
 
-        await parties.insertOne(party as any);
+        const result = await parties.insertOne(party);
+        
+        if (!result.insertedId) {
+            return NextResponse.json({ error: "Failed to create party" }, { status: 500 });
+        }
 
-        // Update user record
-        await users.updateOne(
-            { email: session.user?.email },
-            {
-                $set: {
-                    lastActive: new Date(),
-                },
-                $addToSet: { joinedParties: partyCode },
-            } as any
-        );
-
-        return NextResponse.json({ 
-            success: true, 
-            partyCode,
-            message: `Party "${partyName}" created successfully!`,
-            remainingCreations: rateLimit.remainingRequests,
-            resetTime: rateLimit.resetTime
-        });
+        return NextResponse.json({
+            success: true,
+            party: {
+                code: party.code,
+                name: party.name,
+                maxMembers: party.maxMembers,
+                memberCount: 1,
+                createdAt: party.createdAt.toISOString(),
+                isOwner: true
+            }
+        }, { status: 201 });
 
     } catch (error) {
         console.error("Party creation error:", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        return NextResponse.json(
+            { error: "Internal server error" }, 
+            { status: 500 }
+        );
     }
 }
