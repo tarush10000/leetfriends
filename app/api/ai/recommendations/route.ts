@@ -21,7 +21,7 @@ interface UserProfile {
 
 interface Recommendation {
     id: string;
-    type: 'weakness' | 'consistency' | 'interview_prep' | 'advanced' | 'foundation';
+    type: 'weakness' | 'consistency' | 'interview_prep' | 'advanced' | 'foundation' | 'optimization';
     title: string;
     description: string;
     priority: 'high' | 'medium' | 'low';
@@ -29,14 +29,24 @@ interface Recommendation {
     estimatedTime: string;
     reasoning: string;
     focusAreas: string[];
+    difficulty: 'easy' | 'medium' | 'hard' | 'mixed';
+    impact: number; // 1-10 scale
 }
 
-interface TopicWeakness {
+interface TopicAnalysis {
     topic: string;
-    confidenceScore: number;
+    category: 'data_structures' | 'algorithms' | 'techniques' | 'advanced';
+    currentLevel: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+    confidenceScore: number; // 0-100
     problemsSolved: number;
-    recommendedActions: string[];
-    aiInsights: string;
+    recommendedProblems: number;
+    strengths: string[];
+    weaknesses: string[];
+    nextSteps: string[];
+    priorityLevel: 'high' | 'medium' | 'low';
+    estimatedTimeToImprove: string;
+    keyPatterns: string[];
+    commonMistakes: string[];
 }
 
 export async function POST(req: NextRequest) {
@@ -52,93 +62,109 @@ export async function POST(req: NextRequest) {
 
         const { userProfile, leetcodeStats } = await req.json();
 
-        // Generate AI-powered recommendations and weaknesses analysis
-        const [recommendations, weaknesses] = await Promise.all([
-            generateAIRecommendations(userProfile, leetcodeStats),
-            analyzeWeaknessesWithAI(userProfile, leetcodeStats)
+        // Generate comprehensive analysis
+        const [recommendations, topicAnalysis, overallInsights] = await Promise.all([
+            generateEnhancedRecommendations(userProfile, leetcodeStats),
+            generateTopicAnalysis(userProfile, leetcodeStats),
+            generateOverallInsights(userProfile, leetcodeStats)
         ]);
 
         return NextResponse.json({
             recommendations,
-            weaknesses,
-            generatedAt: new Date().toISOString(),
-            totalProblems: leetcodeStats.total
+            topicAnalysis,
+            overallInsights,
+            metadata: {
+                generatedAt: new Date().toISOString(),
+                totalProblems: leetcodeStats.total,
+                analysisVersion: '2.0',
+                confidence: calculateAnalysisConfidence(leetcodeStats)
+            }
         });
 
     } catch (error) {
-        console.error("AI Recommendations error:", error);
-        // Parse the request body to get leetcodeStats for fallback
-        let leetcodeStats: LeetCodeStats = { easy: 0, medium: 0, hard: 0, total: 0 };
-        try {
-            const body = await req.json();
-            if (body?.leetcodeStats) {
-                leetcodeStats = body.leetcodeStats;
-            }
-        } catch (e) {
-            console.error("Failed to parse request body for fallback stats:", e);
-        }
+        console.error("Enhanced AI Recommendations error:", error);
         return NextResponse.json({ 
-            error: "Failed to generate recommendations",
-            fallback: generateFallbackRecommendations(leetcodeStats)
+            error: "Failed to generate recommendations"
         }, { status: 500 });
     }
 }
 
-async function generateAIRecommendations(userProfile: UserProfile, stats: LeetCodeStats): Promise<Recommendation[]> {
+async function generateEnhancedRecommendations(userProfile: UserProfile, stats: LeetCodeStats): Promise<Recommendation[]> {
     try {
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        const prompt = `You are an expert coding interview coach analyzing a software engineer's LeetCode progress. Generate personalized recommendations based on their statistics.
+        const difficultyRatio = {
+            easy: stats.total > 0 ? (stats.easy / stats.total) * 100 : 0,
+            medium: stats.total > 0 ? (stats.medium / stats.total) * 100 : 0,
+            hard: stats.total > 0 ? (stats.hard / stats.total) * 100 : 0
+        };
+
+        const userLevel = determineUserLevel(stats);
+        const interviewReadiness = calculateInterviewReadiness(stats);
+
+        const prompt = `You are an expert coding interview coach and competitive programming mentor. Analyze this user's LeetCode progress and provide detailed, actionable recommendations.
 
 User Profile:
 - LeetCode Username: ${userProfile.leetcodeUsername}
 - Display Name: ${userProfile.displayName}
+- Current Level: ${userLevel}
 
-Current LeetCode Statistics:
-- Easy Problems: ${stats.easy}
-- Medium Problems: ${stats.medium}  
-- Hard Problems: ${stats.hard}
+Statistics Analysis:
+- Easy Problems: ${stats.easy} (${difficultyRatio.easy.toFixed(1)}%)
+- Medium Problems: ${stats.medium} (${difficultyRatio.medium.toFixed(1)}%)
+- Hard Problems: ${stats.hard} (${difficultyRatio.hard.toFixed(1)}%)
 - Total Problems: ${stats.total}
+- Interview Readiness: ${interviewReadiness}%
 
-Analysis Context:
-- Industry benchmark: 300+ problems for strong preparation
-- Typical distribution: 40% Easy, 45% Medium, 15% Hard
-- FAANG interview focus: Medium (60%) + Hard (40%)
+Benchmarks for Analysis:
+- Industry Standard: 300+ problems for strong interviews
+- Optimal Distribution: 30% Easy, 50% Medium, 20% Hard
+- FAANG Preparation: Focus on Medium (60%) + Hard (40%)
+- Competitive Programming: Heavy emphasis on Hard problems
 
-Please provide 3-4 specific, actionable recommendations in JSON format:
+Provide 4-6 specific, actionable recommendations in this EXACT JSON format:
 
 {
   "recommendations": [
     {
-      "id": "unique_id",
-      "type": "weakness|consistency|interview_prep|advanced|foundation",
-      "title": "Clear, actionable title",
-      "description": "Detailed explanation of why this matters",
+      "id": "unique_identifier",
+      "type": "weakness|consistency|interview_prep|advanced|foundation|optimization",
+      "title": "Clear, specific title (max 50 chars)",
+      "description": "Detailed explanation of the recommendation and its importance",
       "priority": "high|medium|low",
-      "actionItems": ["Specific action 1", "Specific action 2", "Specific action 3"],
-      "estimatedTime": "Realistic timeframe",
-      "reasoning": "Data-driven explanation based on their stats",
-      "focusAreas": ["Specific topics/patterns to focus on"]
+      "actionItems": [
+        "Specific action 1 with numbers/targets",
+        "Specific action 2 with timeline",
+        "Specific action 3 with measurable goals"
+      ],
+      "estimatedTime": "Realistic timeframe (e.g., '2-3 weeks', '1 month')",
+      "reasoning": "Data-driven explanation based on their specific stats and ratios",
+      "focusAreas": ["Specific topic 1", "Specific topic 2", "Specific topic 3"],
+      "difficulty": "easy|medium|hard|mixed",
+      "impact": 8
     }
   ]
 }
 
-Guidelines:
-- Be specific about weaknesses based on actual ratios
-- Include concrete next steps, not generic advice
-- Consider their current level (beginner/intermediate/advanced)
-- Focus on practical improvements for interviews
-- Base priority on impact vs effort ratio`;
+Focus on:
+1. Statistical analysis of their current distribution vs optimal
+2. Specific weaknesses based on problem count and ratios
+3. Interview preparation gaps
+4. Skill progression recommendations
+5. Time-bound, measurable goals
+6. Learning efficiency optimization
+
+Make recommendations specific to their current level and provide actionable next steps.`;
 
         const result = await model.generateContent(prompt);
         const response = result.response.text();
 
-        // Parse JSON from AI response
         let aiRecommendations;
         try {
             const jsonMatch = response.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 aiRecommendations = JSON.parse(jsonMatch[0]);
+                return aiRecommendations.recommendations || [];
             } else {
                 throw new Error("No JSON found in AI response");
             }
@@ -147,19 +173,17 @@ Guidelines:
             return generateFallbackRecommendations(stats);
         }
 
-        return aiRecommendations.recommendations || [];
-
     } catch (error) {
-        console.error("Error generating AI recommendations:", error);
+        console.error("Error generating enhanced recommendations:", error);
         return generateFallbackRecommendations(stats);
     }
 }
 
-async function analyzeWeaknessesWithAI(userProfile: UserProfile, stats: LeetCodeStats): Promise<TopicWeakness[]> {
+async function generateTopicAnalysis(userProfile: UserProfile, stats: LeetCodeStats): Promise<TopicAnalysis[]> {
     try {
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        const prompt = `Analyze coding weaknesses based on LeetCode statistics and provide topic-specific insights.
+        const prompt = `Analyze this user's coding skills by topic area based on their LeetCode statistics. Provide detailed topic-wise analysis.
 
 User Statistics:
 - Easy: ${stats.easy} problems
@@ -167,157 +191,237 @@ User Statistics:
 - Hard: ${stats.hard} problems
 - Total: ${stats.total} problems
 
-Based on these statistics, identify 4-5 key topic areas that need improvement. Consider:
-- Problem distribution suggests certain algorithmic weaknesses
-- Total volume indicates experience level
-- Ratios reveal preparation gaps
-
-Provide analysis in JSON format:
+Based on typical problem distributions and the user's current stats, analyze their likely performance in each topic area. Provide analysis in this EXACT JSON format:
 
 {
-  "weaknesses": [
+  "topicAnalysis": [
     {
-      "topic": "Specific algorithmic topic",
-      "confidenceScore": 0.0-1.0,
-      "problemsSolved": "estimated count for this topic",
-      "recommendedActions": ["Action 1", "Action 2", "Action 3"],
-      "aiInsights": "Detailed explanation of why this is weak and how to improve"
+      "topic": "Arrays & Strings",
+      "category": "data_structures",
+      "currentLevel": "beginner|intermediate|advanced|expert",
+      "confidenceScore": 75,
+      "problemsSolved": 15,
+      "recommendedProblems": 25,
+      "strengths": ["Two pointers", "Basic operations"],
+      "weaknesses": ["Sliding window", "Advanced string algorithms"],
+      "nextSteps": ["Practice sliding window problems", "Study KMP algorithm"],
+      "priorityLevel": "high|medium|low",
+      "estimatedTimeToImprove": "2-3 weeks",
+      "keyPatterns": ["Two pointers", "Sliding window", "Prefix sums"],
+      "commonMistakes": ["Off-by-one errors", "Not handling edge cases"]
     }
   ]
 }
 
-Focus on:
-- Dynamic Programming (if medium/hard ratio is low)
-- Graph Algorithms (critical for interviews)
-- Tree/Binary Search (fundamental concepts)
-- Two Pointers/Sliding Window (optimization techniques)
-- System Design Basics (if total > 200)
+Analyze these core topics:
+1. Arrays & Strings (most common in interviews)
+2. Linked Lists (fundamental data structure)
+3. Trees & Graphs (critical for system design)
+4. Dynamic Programming (hard but high-impact)
+5. Hash Tables & Maps (optimization technique)
+6. Sorting & Searching (foundational algorithms)
+7. Stack & Queue (data structure applications)
+8. Recursion & Backtracking (problem-solving technique)
+9. Greedy Algorithms (optimization strategy)
+10. Bit Manipulation (efficiency optimization)
 
-Be specific about the connection between their stats and the identified weaknesses.`;
+For each topic, estimate based on:
+- Typical distribution in Easy/Medium/Hard problems
+- User's current problem counts
+- Interview frequency and importance
+- Learning curve and prerequisites`;
 
         const result = await model.generateContent(prompt);
         const response = result.response.text();
 
-        let aiWeaknesses;
         try {
             const jsonMatch = response.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
-                aiWeaknesses = JSON.parse(jsonMatch[0]);
+                const analysis = JSON.parse(jsonMatch[0]);
+                return analysis.topicAnalysis || [];
             } else {
                 throw new Error("No JSON found in AI response");
             }
         } catch (parseError) {
-            console.error("Failed to parse AI weaknesses:", parseError);
-            return generateFallbackWeaknesses(stats);
+            console.error("Failed to parse topic analysis:", parseError);
+            return generateFallbackTopicAnalysis(stats);
         }
 
-        return aiWeaknesses.weaknesses || [];
-
     } catch (error) {
-        console.error("Error analyzing weaknesses with AI:", error);
-        return generateFallbackWeaknesses(stats);
+        console.error("Error generating topic analysis:", error);
+        return generateFallbackTopicAnalysis(stats);
     }
 }
 
+async function generateOverallInsights(userProfile: UserProfile, stats: LeetCodeStats) {
+    const userLevel = determineUserLevel(stats);
+    const interviewReadiness = calculateInterviewReadiness(stats);
+    const strengthAreas = identifyStrengthAreas(stats);
+    const improvementAreas = identifyImprovementAreas(stats);
+
+    return {
+        userLevel,
+        interviewReadiness,
+        strengthAreas,
+        improvementAreas,
+        nextMilestone: getNextMilestone(stats),
+        studyIntensity: recommendStudyIntensity(stats),
+        timeToInterviewReady: estimateTimeToReady(stats)
+    };
+}
+
+function determineUserLevel(stats: LeetCodeStats): string {
+    if (stats.total < 50) return 'beginner';
+    if (stats.total < 150) return 'intermediate';
+    if (stats.total < 300) return 'advanced';
+    return 'expert';
+}
+
+function calculateInterviewReadiness(stats: LeetCodeStats): number {
+    const totalWeight = stats.total * 0.3;
+    const mediumWeight = stats.medium * 0.5;
+    const hardWeight = stats.hard * 0.7;
+    const readiness = Math.min((totalWeight + mediumWeight + hardWeight) / 200 * 100, 100);
+    return Math.round(readiness);
+}
+
+function calculateAnalysisConfidence(stats: LeetCodeStats): number {
+    if (stats.total < 10) return 30;
+    if (stats.total < 50) return 60;
+    if (stats.total < 100) return 80;
+    return 95;
+}
+
+function identifyStrengthAreas(stats: LeetCodeStats): string[] {
+    const areas = [];
+    if (stats.easy > 30) areas.push('Fundamental concepts');
+    if (stats.medium > 50) areas.push('Intermediate problem solving');
+    if (stats.hard > 20) areas.push('Advanced algorithms');
+    if (stats.total > 200) areas.push('Consistency and practice');
+    return areas;
+}
+
+function identifyImprovementAreas(stats: LeetCodeStats): string[] {
+    const areas = [];
+    const easyRatio = stats.total > 0 ? stats.easy / stats.total : 0;
+    const mediumRatio = stats.total > 0 ? stats.medium / stats.total : 0;
+    const hardRatio = stats.total > 0 ? stats.hard / stats.total : 0;
+
+    if (easyRatio > 0.5) areas.push('Move beyond easy problems');
+    if (mediumRatio < 0.4) areas.push('Practice more medium problems');
+    if (hardRatio < 0.1 && stats.total > 100) areas.push('Challenge yourself with hard problems');
+    if (stats.total < 100) areas.push('Increase problem-solving volume');
+    
+    return areas;
+}
+
+function getNextMilestone(stats: LeetCodeStats): { target: number; description: string } {
+    if (stats.total < 50) return { target: 50, description: 'Complete 50 problems to build foundation' };
+    if (stats.total < 100) return { target: 100, description: 'Reach 100 problems for solid practice' };
+    if (stats.total < 200) return { target: 200, description: 'Hit 200 problems for interview confidence' };
+    if (stats.total < 300) return { target: 300, description: 'Achieve 300 problems for strong preparation' };
+    return { target: 500, description: 'Master 500 problems for expert level' };
+}
+
+function recommendStudyIntensity(stats: LeetCodeStats): string {
+    if (stats.total < 50) return '1-2 problems daily, focus on understanding';
+    if (stats.total < 150) return '2-3 problems daily, build consistency';
+    if (stats.total < 300) return '3-4 problems daily, target weak areas';
+    return '2-3 problems daily, focus on hard problems and optimization';
+}
+
+function estimateTimeToReady(stats: LeetCodeStats): string {
+    const problemsNeeded = Math.max(0, 200 - stats.total);
+    const weeksNeeded = Math.ceil(problemsNeeded / 14); // 2 problems per day
+    
+    if (weeksNeeded <= 0) return 'Ready now!';
+    if (weeksNeeded <= 4) return `${weeksNeeded} weeks with consistent practice`;
+    if (weeksNeeded <= 12) return `${Math.ceil(weeksNeeded / 4)} months with regular practice`;
+    return '6+ months with dedicated practice';
+}
+
 function generateFallbackRecommendations(stats: LeetCodeStats): Recommendation[] {
-    const total = stats.total;
     const recommendations: Recommendation[] = [];
 
-    // Foundation building
-    if (total < 50) {
-        recommendations.push({
-            id: 'build_foundation',
-            type: 'foundation',
-            title: 'Build Strong Foundations',
-            description: 'Focus on fundamental data structures and algorithms before advancing to complex problems.',
-            priority: 'high',
-            actionItems: [
-                'Master arrays, strings, and hash tables',
-                'Practice basic recursion problems',
-                'Learn Big O notation analysis',
-                'Solve 5 problems daily for 2 weeks'
-            ],
-            estimatedTime: '2-3 weeks',
-            reasoning: `With ${total} problems solved, building strong fundamentals is crucial before tackling advanced concepts.`,
-            focusAreas: ['Arrays', 'Strings', 'Hash Tables', 'Basic Math']
-        });
-    }
+    // Always include consistency recommendation
+    recommendations.push({
+        id: 'consistency_fallback',
+        type: 'consistency',
+        title: 'Build Daily Practice Habit',
+        description: 'Consistency is the key to mastering coding interviews. Regular practice builds pattern recognition and problem-solving speed.',
+        priority: 'high',
+        actionItems: [
+            'Solve 1-2 problems every day',
+            'Set a specific time for practice',
+            'Track your streak and celebrate milestones',
+            'Join coding communities for motivation'
+        ],
+        estimatedTime: '2-3 weeks to establish habit',
+        reasoning: 'Regular practice is more effective than intensive cramming sessions.',
+        focusAreas: ['Time Management', 'Habit Building', 'Consistency'],
+        difficulty: 'mixed',
+        impact: 9
+    });
 
-    // Medium problem focus
-    if (stats.medium < total * 0.4 && total > 30) {
+    // Add foundation recommendation for beginners
+    if (stats.total < 100) {
         recommendations.push({
-            id: 'focus_medium',
-            type: 'weakness',
-            title: 'Strengthen Medium Problem Solving',
-            description: 'Medium problems form the core of technical interviews. Improve your success rate here.',
+            id: 'foundation_fallback',
+            type: 'foundation',
+            title: 'Master Core Data Structures',
+            description: 'Build a strong foundation in essential data structures that appear in most coding interviews.',
             priority: 'high',
             actionItems: [
-                'Practice binary search variations',
-                'Master tree traversal algorithms',
-                'Study dynamic programming basics',
-                'Solve 3 medium problems daily'
+                'Practice array and string manipulation (20 problems)',
+                'Master linked list operations (15 problems)',
+                'Understand hash table implementations (10 problems)',
+                'Study basic tree traversals (15 problems)'
             ],
             estimatedTime: '3-4 weeks',
-            reasoning: `Your medium problem ratio (${Math.round((stats.medium/total)*100)}%) is below the recommended 40-45%.`,
-            focusAreas: ['Binary Search', 'Trees', 'Dynamic Programming', 'Graphs']
-        });
-    }
-
-    // Hard problem advancement
-    if (stats.hard < total * 0.1 && total > 100) {
-        recommendations.push({
-            id: 'advance_hard',
-            type: 'advanced',
-            title: 'Master Hard Problem Techniques',
-            description: 'Hard problems test advanced algorithmic thinking required for senior roles.',
-            priority: 'medium',
-            actionItems: [
-                'Study advanced DP patterns',
-                'Learn graph algorithms (Dijkstra, Union-Find)',
-                'Practice optimization problems',
-                'Solve 1 hard problem every 2 days'
-            ],
-            estimatedTime: '4-6 weeks',
-            reasoning: `With only ${stats.hard} hard problems (${Math.round((stats.hard/total)*100)}%), advancing here will significantly improve your profile.`,
-            focusAreas: ['Advanced DP', 'Graph Algorithms', 'Optimization', 'Complex Data Structures']
+            reasoning: `With ${stats.total} problems solved, focusing on fundamentals will provide the best ROI.`,
+            focusAreas: ['Arrays', 'Strings', 'Linked Lists', 'Hash Tables', 'Trees'],
+            difficulty: 'easy',
+            impact: 8
         });
     }
 
     return recommendations;
 }
 
-function generateFallbackWeaknesses(stats: LeetCodeStats): TopicWeakness[] {
-    const weaknesses: TopicWeakness[] = [];
-
-    // Dynamic Programming weakness
-    if (stats.medium + stats.hard < 50) {
-        weaknesses.push({
+function generateFallbackTopicAnalysis(stats: LeetCodeStats): TopicAnalysis[] {
+    const totalProblems = stats.total;
+    const level = determineUserLevel(stats);
+    
+    return [
+        {
+            topic: 'Arrays & Strings',
+            category: 'data_structures',
+            currentLevel: level as any,
+            confidenceScore: Math.min(Math.round((stats.easy * 2 + stats.medium) / totalProblems * 100), 100),
+            problemsSolved: Math.round(totalProblems * 0.3),
+            recommendedProblems: 30,
+            strengths: ['Basic operations', 'Linear traversal'],
+            weaknesses: ['Two pointers', 'Sliding window'],
+            nextSteps: ['Practice two-pointer technique', 'Master sliding window patterns'],
+            priorityLevel: 'high',
+            estimatedTimeToImprove: '2-3 weeks',
+            keyPatterns: ['Two Pointers', 'Sliding Window', 'Prefix Sums'],
+            commonMistakes: ['Off-by-one errors', 'Not handling edge cases']
+        },
+        {
             topic: 'Dynamic Programming',
-            confidenceScore: Math.min(0.8, (stats.medium + stats.hard) / 50),
-            problemsSolved: Math.floor((stats.medium + stats.hard) * 0.2),
-            recommendedActions: [
-                'Study the DP patterns (1D, 2D, optimized)',
-                'Practice classic problems (Coin Change, LIS, Edit Distance)',
-                'Master memoization vs tabulation approaches'
-            ],
-            aiInsights: 'Dynamic Programming is crucial for 60% of medium/hard interview questions. Your current stats suggest limited exposure to these patterns.'
-        });
-    }
-
-    // Graph algorithms
-    if (stats.hard < 20) {
-        weaknesses.push({
-            topic: 'Graph Algorithms',
-            confidenceScore: Math.min(0.9, stats.hard / 20),
-            problemsSolved: Math.floor(stats.hard * 0.3),
-            recommendedActions: [
-                'Master BFS and DFS traversals',
-                'Learn shortest path algorithms',
-                'Practice topological sorting'
-            ],
-            aiInsights: 'Graph problems appear in 40% of interviews at top companies. Building expertise here will significantly improve your problem-solving toolkit.'
-        });
-    }
-
-    return weaknesses;
+            category: 'algorithms',
+            currentLevel: stats.hard > 10 ? 'intermediate' : 'beginner',
+            confidenceScore: Math.round(stats.hard * 5),
+            problemsSolved: Math.round(stats.hard * 0.4),
+            recommendedProblems: 25,
+            strengths: [],
+            weaknesses: ['State definition', 'Transition relations'],
+            nextSteps: ['Start with 1D DP problems', 'Practice classic DP patterns'],
+            priorityLevel: 'medium',
+            estimatedTimeToImprove: '4-6 weeks',
+            keyPatterns: ['1D DP', '2D DP', 'Memoization'],
+            commonMistakes: ['Incorrect state definition', 'Missing base cases']
+        }
+    ];
 }

@@ -26,13 +26,15 @@ import {
     Zap,
     Menu,
     X,
-    CheckCircle
+    CheckCircle,
+    Lightbulb
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import EnhancedAIInsights from "./AIRecommendations";
 import UpgradeSuccessNotification from "./UpgradeSuccessNotification";
 
 // Types
@@ -52,6 +54,25 @@ interface SubscriptionTier {
     hasInterviewPrep: boolean;
     color: string;
     icon: any;
+}
+
+interface SubscriptionData {
+    currentTier: string;
+    tierLimits: {
+        name: string;
+        maxParties: number;
+        hasAIInsights: boolean;
+        hasInterviewPrep: boolean;
+    };
+    usage: {
+        createdParties: number;
+        totalParties: number;
+    };
+    permissions: {
+        canCreateParty: boolean;
+        canAccessInsights: boolean;
+        canAccessInterviewPrep: boolean;
+    };
 }
 
 interface DashboardProps {
@@ -123,8 +144,10 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [showUpgradeNotification, setShowUpgradeNotification] = useState(upgradeSuccess);
     const router = useRouter();
+    const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
+    const [subscriptionLoading, setSubscriptionLoading] = useState(true);
 
-    const currentTier = SUBSCRIPTION_TIERS[userProfile?.subscriptionTier || 'free'];
+    const currentTier = subscriptionData ? SUBSCRIPTION_TIERS[subscriptionData.currentTier as keyof typeof SUBSCRIPTION_TIERS] : SUBSCRIPTION_TIERS.free;
 
     useEffect(() => {
         fetch("/api/user/parties")
@@ -134,6 +157,42 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
                 setLoading(false);
             })
             .catch(() => setLoading(false));
+    }, []);
+
+    useEffect(() => {
+        const fetchSubscriptionData = async () => {
+            try {
+                setSubscriptionLoading(true);
+                const response = await fetch('/api/user/subscription-limits');
+                if (response.ok) {
+                    const data = await response.json();
+                    setSubscriptionData(data);
+                    console.log('Subscription data loaded:', data); // For debugging
+                } else {
+                    console.error('Failed to fetch subscription data');
+                    // Fallback to free tier
+                    setSubscriptionData({
+                        currentTier: 'free',
+                        tierLimits: { name: 'Free', maxParties: 5, hasAIInsights: false, hasInterviewPrep: false },
+                        usage: { createdParties: 0, totalParties: 0 },
+                        permissions: { canCreateParty: true, canAccessInsights: false, canAccessInterviewPrep: false }
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching subscription data:', error);
+                // Fallback to free tier
+                setSubscriptionData({
+                    currentTier: 'free',
+                    tierLimits: { name: 'Free', maxParties: 5, hasAIInsights: false, hasInterviewPrep: false },
+                    usage: { createdParties: 0, totalParties: 0 },
+                    permissions: { canCreateParty: true, canAccessInsights: false, canAccessInterviewPrep: false }
+                });
+            } finally {
+                setSubscriptionLoading(false);
+            }
+        };
+
+        fetchSubscriptionData();
     }, []);
 
     // Show upgrade notification if user just upgraded
@@ -148,8 +207,10 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
     };
 
     const canAccessFeature = (feature: 'insights' | 'interview-prep') => {
-        if (feature === 'insights') return currentTier.hasAIInsights;
-        if (feature === 'interview-prep') return currentTier.hasInterviewPrep;
+        if (!subscriptionData) return false;
+
+        if (feature === 'insights') return subscriptionData.permissions.canAccessInsights;
+        if (feature === 'interview-prep') return subscriptionData.permissions.canAccessInterviewPrep;
         return false;
     };
 
@@ -169,11 +230,11 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
         const totalSolved = currentStats.total;
         const partiesCount = parties.length;
         const createdPartiesCount = parties.filter(p => p.isOwner).length;
-        
+
         // Mock streak data - in real app, this would come from user data
         const currentStreak = 0; // This should come from user data
         const maxStreak = 3; // This should come from user data
-        
+
         return [
             // Progress Achievements - Problems Solved
             { id: 'first_solve', name: 'First Steps', description: 'Solve your first problem', icon: Target, xp: 50, unlocked: totalSolved >= 1, category: 'progress', tier: 'bronze' },
@@ -184,7 +245,7 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
             { id: 'two_hundred_problems', name: 'Problem Master', description: 'Solve 200 problems', icon: Crown, xp: 1000, unlocked: totalSolved >= 200, category: 'progress', tier: 'gold' },
             { id: 'three_hundred_problems', name: 'Coding Guru', description: 'Solve 300 problems', icon: Star, xp: 1500, unlocked: totalSolved >= 300, category: 'progress', tier: 'platinum' },
             { id: 'five_hundred_problems', name: 'Algorithm Expert', description: 'Solve 500 problems', icon: Zap, xp: 2500, unlocked: totalSolved >= 500, category: 'progress', tier: 'platinum' },
-            
+
             // Difficulty-based Achievements
             { id: 'easy_ten', name: 'Easy Rider', description: 'Solve 10 easy problems', icon: CheckCircle, xp: 75, unlocked: currentStats.easy >= 10, category: 'difficulty', tier: 'bronze' },
             { id: 'easy_fifty', name: 'Foundation Builder', description: 'Solve 50 easy problems', icon: Target, xp: 200, unlocked: currentStats.easy >= 50, category: 'difficulty', tier: 'silver' },
@@ -193,7 +254,7 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
             { id: 'hard_five', name: 'Challenge Accepted', description: 'Solve 5 hard problems', icon: Crown, xp: 200, unlocked: currentStats.hard >= 5, category: 'difficulty', tier: 'silver' },
             { id: 'hard_twenty', name: 'Hard Core', description: 'Solve 20 hard problems', icon: Star, xp: 600, unlocked: currentStats.hard >= 20, category: 'difficulty', tier: 'gold' },
             { id: 'hard_fifty', name: 'Algorithm Wizard', description: 'Solve 50 hard problems', icon: Zap, xp: 1200, unlocked: currentStats.hard >= 50, category: 'difficulty', tier: 'platinum' },
-            
+
             // Social Achievements
             { id: 'first_party', name: 'Party Starter', description: 'Create your first party', icon: Users, xp: 75, unlocked: createdPartiesCount >= 1, category: 'social', tier: 'bronze' },
             { id: 'party_joiner', name: 'Social Coder', description: 'Join your first party', icon: Users, xp: 50, unlocked: partiesCount >= 1, category: 'social', tier: 'bronze' },
@@ -201,7 +262,7 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
             { id: 'five_parties', name: 'Social Butterfly', description: 'Join 5 different parties', icon: Users, xp: 200, unlocked: partiesCount >= 5, category: 'social', tier: 'silver' },
             { id: 'party_host', name: 'Host with the Most', description: 'Create 3 parties', icon: Building, xp: 300, unlocked: createdPartiesCount >= 3, category: 'social', tier: 'silver' },
             { id: 'party_master', name: 'Party Master', description: 'Create 5 parties', icon: Crown, xp: 500, unlocked: createdPartiesCount >= 5, category: 'social', tier: 'gold' },
-            
+
             // Streak Achievements
             { id: 'three_day_streak', name: 'Consistency', description: 'Solve problems for 3 consecutive days', icon: Calendar, xp: 100, unlocked: maxStreak >= 3, category: 'streak', tier: 'bronze' },
             { id: 'week_streak', name: 'Weekly Warrior', description: 'Solve problems for 7 consecutive days', icon: TrendingUp, xp: 300, unlocked: maxStreak >= 7, category: 'streak', tier: 'silver' },
@@ -209,7 +270,7 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
             { id: 'month_streak', name: 'Monthly Master', description: 'Solve problems for 30 consecutive days', icon: Trophy, xp: 1000, unlocked: maxStreak >= 30, category: 'streak', tier: 'gold' },
             { id: 'fifty_day_streak', name: 'Unstoppable', description: 'Solve problems for 50 consecutive days', icon: Star, xp: 1500, unlocked: maxStreak >= 50, category: 'streak', tier: 'gold' },
             { id: 'hundred_day_streak', name: 'Century Streak', description: 'Solve problems for 100 consecutive days', icon: Crown, xp: 2500, unlocked: maxStreak >= 100, category: 'streak', tier: 'platinum' },
-            
+
             // Special Achievements
             { id: 'early_bird', name: 'Early Bird', description: 'Solve a problem before 8 AM', icon: Clock, xp: 150, unlocked: false, category: 'special', tier: 'bronze' },
             { id: 'night_owl', name: 'Night Owl', description: 'Solve a problem after 11 PM', icon: Star, xp: 150, unlocked: false, category: 'special', tier: 'bronze' },
@@ -218,17 +279,17 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
             { id: 'marathon_coder', name: 'Marathon Coder', description: 'Solve 10 problems in one day', icon: Crown, xp: 500, unlocked: false, category: 'special', tier: 'gold' },
             { id: 'tier_upgrade', name: 'Premium Member', description: 'Upgrade to a paid tier', icon: Crown, xp: 500, unlocked: currentTier.level !== 'free', category: 'special', tier: 'gold' },
             { id: 'profile_complete', name: 'All Set Up', description: 'Complete your profile setup', icon: CheckCircle, xp: 100, unlocked: userProfile?.onboarded || false, category: 'special', tier: 'bronze' },
-            
+
             // Time-based Achievements
             { id: 'daily_solver', name: 'Daily Solver', description: 'Solve at least one problem today', icon: Calendar, xp: 25, unlocked: false, category: 'time', tier: 'bronze' },
             { id: 'weekly_goal', name: 'Weekly Goal', description: 'Solve 7 problems this week', icon: Target, xp: 100, unlocked: false, category: 'time', tier: 'bronze' },
             { id: 'monthly_challenger', name: 'Monthly Challenger', description: 'Solve 30 problems this month', icon: Trophy, xp: 300, unlocked: false, category: 'time', tier: 'silver' },
-            
+
             // Milestone Achievements
             { id: 'leetcode_veteran', name: 'LeetCode Veteran', description: 'Active for 30 days', icon: Star, xp: 200, unlocked: false, category: 'milestone', tier: 'silver' },
             { id: 'coding_champion', name: 'Coding Champion', description: 'Active for 100 days', icon: Crown, xp: 500, unlocked: false, category: 'milestone', tier: 'gold' },
             { id: 'algorithm_legend', name: 'Algorithm Legend', description: 'Active for 365 days', icon: Zap, xp: 1000, unlocked: false, category: 'milestone', tier: 'platinum' },
-            
+
             // Competition Achievements
             { id: 'first_challenge', name: 'Challenge Rookie', description: 'Complete your first party challenge', icon: Target, xp: 100, unlocked: false, category: 'competition', tier: 'bronze' },
             { id: 'challenge_winner', name: 'Challenge Winner', description: 'Win a party challenge', icon: Trophy, xp: 200, unlocked: false, category: 'competition', tier: 'silver' },
@@ -304,66 +365,59 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3 }}
-                className={`relative overflow-hidden rounded-lg border transition-all duration-200 ${
-                    achievement.unlocked
-                        ? `bg-gradient-to-br ${getTierColor(achievement.tier).split(' ')[0]} ${getTierColor(achievement.tier).split(' ')[1]}/10 ${getTierColor(achievement.tier).split(' ')[2]} hover:border-opacity-70`
-                        : 'bg-slate-800/30 border-slate-600/30 hover:border-slate-500/50'
-                }`}
+                className={`relative overflow-hidden rounded-lg border transition-all duration-200 ${achievement.unlocked
+                    ? `bg-gradient-to-br ${getTierColor(achievement.tier).split(' ')[0]} ${getTierColor(achievement.tier).split(' ')[1]}/10 ${getTierColor(achievement.tier).split(' ')[2]} hover:border-opacity-70`
+                    : 'bg-slate-800/30 border-slate-600/30 hover:border-slate-500/50'
+                    }`}
             >
                 {achievement.unlocked && (
                     <div className="absolute top-2 right-2">
                         <CheckCircle className="w-5 h-5 text-green-400" />
                     </div>
                 )}
-                
+
                 <div className="p-4">
                     <div className="flex items-start justify-between mb-3">
-                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                            achievement.unlocked 
-                                ? `bg-gradient-to-br ${getTierColor(achievement.tier).split(' ')[0]} ${getTierColor(achievement.tier).split(' ')[1]}` 
-                                : 'bg-slate-700'
-                        }`}>
-                            <achievement.icon className={`w-6 h-6 ${
-                                achievement.unlocked ? 'text-white' : 'text-slate-400'
-                            }`} />
+                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${achievement.unlocked
+                            ? `bg-gradient-to-br ${getTierColor(achievement.tier).split(' ')[0]} ${getTierColor(achievement.tier).split(' ')[1]}`
+                            : 'bg-slate-700'
+                            }`}>
+                            <achievement.icon className={`w-6 h-6 ${achievement.unlocked ? 'text-white' : 'text-slate-400'
+                                }`} />
                         </div>
-                        
-                        <Badge 
-                            variant="outline" 
-                            className={`text-xs ${
-                                achievement.unlocked 
-                                    ? getTierBadgeColor(achievement.tier)
-                                    : 'border-slate-600/30 text-slate-500'
-                            }`}
+
+                        <Badge
+                            variant="outline"
+                            className={`text-xs ${achievement.unlocked
+                                ? getTierBadgeColor(achievement.tier)
+                                : 'border-slate-600/30 text-slate-500'
+                                }`}
                         >
                             {achievement.tier?.toUpperCase() || 'BRONZE'}
                         </Badge>
                     </div>
-                    
-                    <h3 className={`font-semibold mb-1 text-sm ${
-                        achievement.unlocked ? 'text-white' : 'text-slate-400'
-                    }`}>
+
+                    <h3 className={`font-semibold mb-1 text-sm ${achievement.unlocked ? 'text-white' : 'text-slate-400'
+                        }`}>
                         {achievement.name}
                     </h3>
-                    
-                    <p className={`text-xs mb-3 leading-relaxed ${
-                        achievement.unlocked ? 'text-slate-300' : 'text-slate-500'
-                    }`}>
+
+                    <p className={`text-xs mb-3 leading-relaxed ${achievement.unlocked ? 'text-slate-300' : 'text-slate-500'
+                        }`}>
                         {achievement.description}
                     </p>
-                    
+
                     <div className="flex items-center justify-between">
-                        <Badge 
-                            variant="outline" 
-                            className={`text-xs ${
-                                achievement.unlocked 
-                                    ? 'border-green-500/30 text-green-400' 
-                                    : 'border-slate-600/30 text-slate-500'
-                            }`}
+                        <Badge
+                            variant="outline"
+                            className={`text-xs ${achievement.unlocked
+                                ? 'border-green-500/30 text-green-400'
+                                : 'border-slate-600/30 text-slate-500'
+                                }`}
                         >
                             {achievement.xp} XP
                         </Badge>
-                        
+
                         {achievement.unlocked && (
                             <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
                                 ✓ Unlocked
@@ -521,7 +575,6 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
                                                         ? Math.max(0, userProfile.currentStats.total - userProfile.initialStats.total)
                                                         : 0}
                                                 </p>
-                                                <p className="text-xs text-slate-400 mt-1">Since joining</p>
                                             </div>
                                             <TrendingUp className="w-8 h-8 lg:w-12 lg:h-12 text-orange-400" />
                                         </div>
@@ -543,7 +596,7 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
                                 className={`flex-1 ${canCreateParty()
                                     ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
                                     : "bg-slate-700/50 hover:bg-slate-600/50 border border-purple-500/30"
-                                }`}
+                                    }`}
                                 disabled={!canCreateParty()}
                             >
                                 {canCreateParty() ? (
@@ -600,7 +653,7 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
                                             {searchQuery ? 'No parties found' : 'No parties yet'}
                                         </h3>
                                         <p className="text-slate-400 mb-4">
-                                            {searchQuery 
+                                            {searchQuery
                                                 ? 'Try adjusting your search terms'
                                                 : 'Create your first party to start competing with friends!'
                                             }
@@ -873,25 +926,65 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
                         />
                     );
                 }
-                return (
-                    <div className="space-y-6">
+
+                // Check if user has LeetCode stats
+                if (!userProfile?.currentStats || userProfile.currentStats.total === 0) {
+                    return (
                         <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
-                            <CardHeader>
-                                <CardTitle className="text-white flex items-center">
-                                    <Brain className="w-5 h-5 mr-2" />
-                                    AI Insights
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-center py-8">
-                                    <Brain className="w-16 h-16 text-purple-400 mx-auto mb-4" />
-                                    <h3 className="text-lg font-semibold text-white mb-2">AI-Powered Recommendations</h3>
-                                    <p className="text-slate-400">Your personalized insights and recommendations will appear here.</p>
+                            <CardContent className="p-8 text-center">
+                                <div className="mb-6">
+                                    <div className="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <Brain className="w-8 h-8 text-purple-400" />
+                                    </div>
+                                    <h3 className="text-xl font-semibold text-white mb-2">Ready for AI Insights!</h3>
+                                    <p className="text-slate-400 max-w-md mx-auto">
+                                        Connect your LeetCode account and start solving problems to unlock personalized AI-powered recommendations and insights.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
+                                        <div className="bg-slate-700/30 p-4 rounded-lg">
+                                            <Target className="w-6 h-6 text-blue-400 mx-auto mb-2" />
+                                            <p className="text-sm text-slate-300 font-medium">Weakness Analysis</p>
+                                            <p className="text-xs text-slate-400 mt-1">Identify areas to improve</p>
+                                        </div>
+                                        <div className="bg-slate-700/30 p-4 rounded-lg">
+                                            <TrendingUp className="w-6 h-6 text-green-400 mx-auto mb-2" />
+                                            <p className="text-sm text-slate-300 font-medium">Progress Tracking</p>
+                                            <p className="text-xs text-slate-400 mt-1">Monitor your growth</p>
+                                        </div>
+                                        <div className="bg-slate-700/30 p-4 rounded-lg">
+                                            <Lightbulb className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+                                            <p className="text-sm text-slate-300 font-medium">Smart Suggestions</p>
+                                            <p className="text-xs text-slate-400 mt-1">Get personalized tips</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                                        <Button
+                                            onClick={() => router.push('/settings')}
+                                            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                                        >
+                                            <Settings className="w-4 h-4 mr-2" />
+                                            Update LeetCode Profile
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => window.open('https://leetcode.com', '_blank')}
+                                            className="border-slate-700 bg-slate-800/50 hover:bg-slate-700/50"
+                                        >
+                                            <Code className="w-4 h-4 mr-2" />
+                                            Practice on LeetCode
+                                        </Button>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
-                    </div>
-                );
+                    );
+                }
+
+                return <EnhancedAIInsights userProfile={userProfile} userEmail={""} />;
 
             case 'interview-prep':
                 if (!canAccessFeature('interview-prep')) {
@@ -962,7 +1055,7 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
                                 </div>
                             )}
                         </div>
-                        
+
                         <div className="flex items-center space-x-3">
                             {/* Desktop Navigation */}
                             <div className="hidden md:flex items-center space-x-3">
@@ -1067,13 +1160,12 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
                                 <button
                                     key={tab.id}
                                     onClick={() => !tab.locked && setActiveTab(tab.id as TabType)}
-                                    className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                                        activeTab === tab.id
-                                            ? 'bg-purple-600 text-white'
-                                            : tab.locked
+                                    className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+                                        ? 'bg-purple-600 text-white'
+                                        : tab.locked
                                             ? 'text-slate-500 cursor-not-allowed'
                                             : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
-                                    }`}
+                                        }`}
                                     disabled={tab.locked}
                                 >
                                     <tab.icon className="w-4 h-4 mr-2" />
@@ -1090,13 +1182,12 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
                                     <button
                                         key={tab.id}
                                         onClick={() => !tab.locked && setActiveTab(tab.id as TabType)}
-                                        className={`flex flex-col items-center justify-center p-3 rounded-lg text-xs font-medium transition-all duration-200 ${
-                                            activeTab === tab.id
-                                                ? 'bg-purple-600 text-white'
-                                                : tab.locked
+                                        className={`flex flex-col items-center justify-center p-3 rounded-lg text-xs font-medium transition-all duration-200 ${activeTab === tab.id
+                                            ? 'bg-purple-600 text-white'
+                                            : tab.locked
                                                 ? 'bg-slate-800/30 text-slate-500 cursor-not-allowed'
                                                 : 'bg-slate-800/50 text-slate-300 hover:text-white hover:bg-slate-700/50'
-                                        }`}
+                                            }`}
                                         disabled={tab.locked}
                                     >
                                         <div className="relative">

@@ -603,6 +603,7 @@ export default function PricingPage({ currentTier = 'free', userEmail }: Pricing
                         <Button
                             variant="outline"
                             className="border-slate-700 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300"
+                            onClick={() => router.push('/contact')}
                         >
                             Contact Support
                         </Button>

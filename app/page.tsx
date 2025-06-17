@@ -31,6 +31,7 @@ import {
   Unlock
 } from "lucide-react";
 import Link from "next/link";
+import TestimonialsCarousel from "@/components/Testimonials";
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
@@ -80,64 +81,55 @@ export default async function Home() {
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-purple-500/5 to-pink-500/5 rounded-full blur-2xl"></div>
           </div>
 
-          {/* Hero Content */}
-          <div className="relative z-10 max-w-4xl mx-auto">
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-slate-800/50 border border-slate-700/50 mb-8 backdrop-blur-sm">
-              <Sparkles className="w-4 h-4 text-purple-400 mr-2" />
-              <span className="text-slate-300 text-sm">Transform your LeetCode journey</span>
+          <div className="relative z-10 max-w-6xl mx-auto">
+            {/* Main Heading */}
+            <div className="mb-8">
+              <h1 className="text-6xl md:text-8xl font-extrabold mb-6 tracking-tight">
+                <span className="bg-gradient-to-r from-purple-400 via-pink-500 to-purple-600 text-transparent bg-clip-text">
+                  LeetFriends
+                </span>
+              </h1>
+
+              {/* Animated tagline */}
+              <div className="text-2xl md:text-3xl text-slate-300 mb-4 font-medium">
+                <span className="bg-gradient-to-r from-blue-400 to-purple-400 text-transparent bg-clip-text">
+                  Maybe LeetCode was the friends we made along the way.
+                </span>
+              </div>
             </div>
-            
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-              Maybe LeetCode was the{" "}
-              <span className="bg-gradient-to-r from-purple-400 to-pink-500 text-transparent bg-clip-text">
-                friends
-              </span>{" "}
-              we made along the way
-            </h1>
-            
-            <p className="text-xl md:text-2xl text-slate-400 mb-12 max-w-3xl mx-auto leading-relaxed">
-              Turn solo grinding into collaborative growth. Create parties, compete with friends, 
-              and level up your coding skills with AI-powered insights.
+
+            {/* Hero Description */}
+            <p className="text-xl md:text-2xl text-slate-400 mb-8 max-w-4xl mx-auto leading-relaxed">
+              Transform your solo coding grind into an epic multiplayer adventure. Create parties, compete with friends,
+              and make LeetCode actually fun with <span className="text-purple-400 font-semibold">AI-powered challenges</span> and
+              <span className="text-pink-400 font-semibold"> real-time competitions</span>.
             </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
               <Link href="/login">
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 text-lg font-semibold rounded-xl"
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-8 py-4 text-lg font-semibold"
                 >
                   <Rocket className="w-5 h-5 mr-2" />
                   Start Your Journey
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
+
               <Link href="#features">
                 <Button
                   variant="outline"
                   size="lg"
-                  className="border-slate-700 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 px-8 py-4 text-lg rounded-xl backdrop-blur-sm"
+                  className="border-slate-600 bg-slate-800/30 hover:bg-slate-700/50 text-slate-300 backdrop-blur-sm px-8 py-4 text-lg font-semibold"
                 >
-                  <Code2 className="w-5 h-5 mr-2" />
-                  Learn More
+                  <Heart className="w-5 h-5 mr-2" />
+                  Explore Features
                 </Button>
               </Link>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-8 mt-16 max-w-2xl mx-auto">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-white mb-2">500+</div>
-                <div className="text-slate-400 text-sm">Active Users</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-white mb-2">50K+</div>
-                <div className="text-slate-400 text-sm">Problems Solved</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-white mb-2">95%</div>
-                <div className="text-slate-400 text-sm">User Satisfaction</div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -265,6 +257,67 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* How It Works Section */}
+      <section className="py-20 px-4 bg-slate-900/30">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              <span className="bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
+                How It Works
+
+              </span>
+            </h2>
+            <p className="text-xl text-slate-400">
+              Get started in minutes and transform your coding practice forever
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Step 1 */}
+            <div className="text-center group">
+              <div className="relative mb-8 flex flex-col items-center">
+                <div className="w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-300">
+                  <span className="text-2xl font-bold text-white">1</span>
+                </div>
+                {/* Hide connector line on last row or all rows for better look */}
+                <div className="hidden"></div>
+              </div>
+              <h3 className="text-2xl font-bold mb-4 text-white">Sign Up & Connect</h3>
+              <p className="text-slate-400 leading-relaxed">
+                Create your account with Google or GitHub, link your LeetCode profile, and set up your coding persona.
+              </p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="text-center group">
+              <div className="relative mb-8 flex flex-col items-center">
+                <div className="w-20 h-20 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-full flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-300">
+                  <span className="text-2xl font-bold text-white">2</span>
+                </div>
+                <div className="hidden"></div>
+              </div>
+              <h3 className="text-2xl font-bold mb-4 text-white">Create or Join Parties</h3>
+              <p className="text-slate-400 leading-relaxed">
+                Start your own coding party or join friends with a party code. Set challenges and compete together.
+              </p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="text-center group">
+              <div className="relative mb-8 flex flex-col items-center">
+                <div className="w-20 h-20 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-300">
+                  <span className="text-2xl font-bold text-white">3</span>
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold mb-4 text-white">Code & Compete</h3>
+              <p className="text-slate-400 leading-relaxed">
+                Solve problems, compete in real-time, track progress, and celebrate victories with your coding friends.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Section */}
       <section id="pricing" className="py-20 px-4 bg-gradient-to-br from-slate-900/50 to-purple-900/20">
         <div className="max-w-7xl mx-auto">
@@ -293,7 +346,7 @@ export default async function Home() {
                   <span className="text-lg text-slate-400">/mo</span>
                 </div>
                 <p className="text-slate-400 mb-6">Perfect for getting started</p>
-                
+
                 <div className="space-y-4 mb-8 text-left">
                   <div className="flex items-center">
                     <CheckCircle className="w-5 h-5 text-green-400 mr-3" />
@@ -344,7 +397,7 @@ export default async function Home() {
                   <span className="text-lg text-slate-400">/mo</span>
                 </div>
                 <p className="text-slate-400 mb-6">For serious competitive programmers</p>
-                
+
                 <div className="space-y-4 mb-8 text-left">
                   <div className="flex items-center">
                     <CheckCircle className="w-5 h-5 text-green-400 mr-3" />
@@ -389,7 +442,7 @@ export default async function Home() {
                   <span className="text-lg text-slate-400">/mo</span>
                 </div>
                 <p className="text-slate-400 mb-6">Complete interview preparation</p>
-                
+
                 <div className="space-y-4 mb-8 text-left">
                   <div className="flex items-center">
                     <CheckCircle className="w-5 h-5 text-green-400 mr-3" />
@@ -424,7 +477,7 @@ export default async function Home() {
           </div>
 
           <div className="text-center mt-12">
-            <p className="text-slate-400 mb-4">All plans include a 7-day free trial • No credit card required</p>
+            <p className="text-slate-400 mb-4">All plans include a 7-day free trial</p>
             <Link href="/pricing">
               <Button variant="outline" className="border-slate-700 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300">
                 View Detailed Pricing
@@ -436,89 +489,7 @@ export default async function Home() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-20 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Loved by{" "}
-              <span className="bg-gradient-to-r from-purple-400 to-pink-500 text-transparent bg-clip-text">
-                developers
-              </span>
-            </h2>
-            <p className="text-xl text-slate-400">
-              See what our community has to say about their coding journey with LeetFriends
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
-              <CardContent className="p-8">
-                <div className="flex items-center mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <p className="text-slate-300 mb-6">
-                  "LeetFriends transformed my coding practice from a solo grind to an engaging social experience. The AI insights helped me identify my weak spots!"
-                </p>
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-white font-semibold">S</span>
-                  </div>
-                  <div>
-                    <p className="text-white font-semibold">Sarah Chen</p>
-                    <p className="text-slate-400 text-sm">Software Engineer @ Google</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
-              <CardContent className="p-8">
-                <div className="flex items-center mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <p className="text-slate-300 mb-6">
-                  "The interview prep module in Gold tier was incredible. Got questions from the exact companies I was targeting. Landed my dream job!"
-                </p>
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-teal-600 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-white font-semibold">M</span>
-                  </div>
-                  <div>
-                    <p className="text-white font-semibold">Marcus Rodriguez</p>
-                    <p className="text-slate-400 text-sm">SDE @ Meta</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
-              <CardContent className="p-8">
-                <div className="flex items-center mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <p className="text-slate-300 mb-6">
-                  "Amazing platform! Competing with friends made LeetCode actually fun. The progress tracking keeps me motivated every day."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-white font-semibold">A</span>
-                  </div>
-                  <div>
-                    <p className="text-white font-semibold">Alex Kumar</p>
-                    <p className="text-slate-400 text-sm">CS Student @ Stanford</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
+      <TestimonialsCarousel />
 
       {/* CTA Section */}
       <section className="py-20 px-4 bg-gradient-to-br from-purple-900/20 to-pink-900/20">
@@ -533,7 +504,7 @@ export default async function Home() {
           <p className="text-xl text-slate-400 mb-12 max-w-2xl mx-auto">
             Join thousands of developers who are already improving their skills, landing dream jobs, and having fun while coding.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link href="/login">
               <Button
@@ -573,23 +544,23 @@ export default async function Home() {
                 LeetFriends
               </span>
             </div>
-            
+
             <div className="flex space-x-6 text-slate-400">
-              <Link href="#" className="hover:text-white transition-colors">
+              <Link href="/privacy" className="hover:text-white transition-colors">
                 Privacy
               </Link>
-              <Link href="#" className="hover:text-white transition-colors">
+              <Link href="/terms" className="hover:text-white transition-colors">
                 Terms
               </Link>
-              <Link href="#" className="hover:text-white transition-colors">
+              <Link href="/contact" className="hover:text-white transition-colors">
                 Support
               </Link>
-              <Link href="#pricing" className="hover:text-white transition-colors">
+              <Link href="/pricing" className="hover:text-white transition-colors">
                 Pricing
               </Link>
             </div>
           </div>
-          
+
           <div className="mt-8 pt-8 border-t border-slate-800/50 text-center text-slate-500">
             <p>&copy; 2025 LeetFriends. All rights reserved.</p>
             <p className="mt-2 flex items-center justify-center">

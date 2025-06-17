@@ -16,7 +16,7 @@ export const RAZORPAY_PLANS = {
     },
     silver_yearly: {
         id: process.env.RAZORPAY_SILVER_YEARLY_PLAN_ID!,
-        amount: 9590, // ₹95.90 in paise (20% discount)
+        amount: 66240, // ₹662.40 in paise (20% discount)
         currency: 'INR',
         interval: 1,
         period: 'yearly'
@@ -30,7 +30,7 @@ export const RAZORPAY_PLANS = {
     },
     gold_yearly: {
         id: process.env.RAZORPAY_GOLD_YEARLY_PLAN_ID!,
-        amount: 19190, // ₹191.90 in paise (20% discount)
+        amount: 162240, // ₹1622.40 in paise (20% discount)
         currency: 'INR',
         interval: 1,
         period: 'yearly'
