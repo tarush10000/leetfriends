@@ -36,6 +36,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import EnhancedAIInsights from "./AIRecommendations";
 import UpgradeSuccessNotification from "./UpgradeSuccessNotification";
+import InterviewPrep from "./InterviewPrep2";
 
 // Types
 interface PartyPreview {
@@ -143,6 +144,7 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
     const [searchQuery, setSearchQuery] = useState('');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [showUpgradeNotification, setShowUpgradeNotification] = useState(upgradeSuccess);
+    const [showAudioInterview, setShowAudioInterview] = useState(false);
     const router = useRouter();
     const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
     const [subscriptionLoading, setSubscriptionLoading] = useState(true);
@@ -1022,6 +1024,41 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
                                 </div>
                             </CardContent>
                         </Card>
+
+                        {/* Audio Interview Card */}
+                        <Card
+                            className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm cursor-pointer hover:bg-slate-700/50 transition"
+                            onClick={() => setShowAudioInterview(true)}
+                        >
+                            <CardHeader>
+                                <CardTitle className="text-white flex items-center">
+                                    <Lightbulb className="w-5 h-5 mr-2" />
+                                    Audio - Interview
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-center py-4">
+                                    <Lightbulb className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
+                                    <h3 className="text-lg font-semibold text-white mb-2">Practice with Audio Questions</h3>
+                                    <p className="text-slate-400">Simulate real interview scenarios with audio-based questions.</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Modal or inline rendering for InterviewPrep */}
+                        {showAudioInterview && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+                                <div className="bg-slate-900 rounded-lg shadow-lg max-w-2xl w-full p-6 relative">
+                                    <button
+                                        className="absolute top-3 right-3 text-slate-400 hover:text-white"
+                                        onClick={() => setShowAudioInterview(false)}
+                                    >
+                                        <X className="w-6 h-6" />
+                                    </button>
+                                    <InterviewPrep />
+                                </div>
+                            </div>
+                        )}
                     </div>
                 );
 
