@@ -4,19 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-
-interface QuestionRequest {
-    numberOfQuestions: number;
-    topics: string[];
-}
-
-const TOPIC_MAPPINGS: Record<string, string> = {
-    'oop': 'Object-Oriented Programming',
-    'os': 'Operating Systems',
-    'dbms': 'Database Management Systems',
-    'networks': 'Computer Networks'
-};
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(req: NextRequest) {
     try {
@@ -25,40 +13,66 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const body: QuestionRequest = await req.json();
-        const { numberOfQuestions, topics } = body;
+        const { numberOfQuestions, topics, randomSeed, timestamp, sessionId } = await req.json();
 
         if (!numberOfQuestions || !topics || topics.length === 0) {
             return NextResponse.json({
-                error: "Invalid request parameters"
+                error: "Missing required fields"
             }, { status: 400 });
         }
 
-        // Map topic IDs to full names
-        const topicNames = topics.map(t => TOPIC_MAPPINGS[t] || t);
-
-        // Generate questions using Gemini
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        const prompt = `You are an expert technical interviewer for top tech companies. Generate ${numberOfQuestions} interview questions for the following topics: ${topicNames.join(', ')}.
+        const topicNames = topics.map((topic: string) => {
+            switch (topic) {
+                case 'oop': return 'Object-Oriented Programming';
+                case 'os': return 'Operating Systems';
+                case 'dbms': return 'Database Management Systems';
+                case 'networks': return 'Computer Networks';
+                default: return topic;
+            }
+        });
+
+        // Enhanced prompt with randomization and variety
+        const prompt = `Generate ${numberOfQuestions} unique and varied interview questions for the following topics: ${topicNames.join(', ')}.
+
+IMPORTANT: Create completely different questions each time. Use this randomization context:
+- Session ID: ${sessionId}
+- Random Seed: ${randomSeed}
+- Timestamp: ${timestamp}
+
+Requirements:
+1. Generate UNIQUE questions - avoid common/repetitive questions
+2. Mix different question types: theoretical, practical, scenario-based, problem-solving
+3. Vary difficulty levels appropriately
+4. Include modern/current practices and technologies
+5. Make questions interview-realistic and engaging
 
 For each question, provide:
-1. A clear, concise question that would be asked in a real technical interview
-2. The expected key points that a good answer should cover (3-5 points)
-3. The difficulty level (Easy, Medium, or Hard)
+1. A unique, well-crafted question that tests deep understanding
+2. 3-5 key points that a strong answer should cover
+3. Appropriate difficulty level (Easy, Medium, Hard)
 4. The primary topic it belongs to
 
-Ensure questions are:
-- Practical and relevant to real-world scenarios
-- Progressively challenging
-- Testing both theoretical knowledge and practical application
-- Similar to what companies like Google, Meta, Amazon ask
+Question variety examples:
+- Design/architecture questions
+- Troubleshooting scenarios  
+- Best practices and trade-offs
+- Real-world application problems
+- Comparison and analysis questions
+- Implementation challenges
 
-Return the response in this EXACT JSON format:
+Ensure questions are:
+- Professionally relevant and current
+- Thought-provoking and substantive
+- Varied in approach and style
+- Suitable for ${new Date().getFullYear()} technology landscape
+
+Return EXACTLY this JSON format:
 {
   "questions": [
     {
-      "id": "unique_id",
+      "id": "unique_id_${randomSeed}_1",
       "question": "The interview question",
       "topic": "topic_id (oop, os, dbms, or networks)",
       "difficulty": "Easy|Medium|Hard",
@@ -88,6 +102,14 @@ Return the response in this EXACT JSON format:
             return NextResponse.json({
                 error: "Failed to generate questions"
             }, { status: 500 });
+        }
+
+        // Ensure each question has a unique ID
+        if (questionsData.questions) {
+            questionsData.questions = questionsData.questions.map((q: any, index: number) => ({
+                ...q,
+                id: `${sessionId}_${randomSeed}_${index}_${timestamp}`
+            }));
         }
 
         return NextResponse.json(questionsData);
