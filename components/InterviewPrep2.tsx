@@ -185,30 +185,6 @@ export default function InterviewPrep({ onExit }: InterviewPrepProps) {
         }
     };
 
-    // Share functionality
-    const shareResults = async () => {
-        const shareData = {
-            title: 'Interview Practice Results',
-            text: `I scored ${calculateOverallScore()}% on my interview practice! ${questions.filter(q => q.score !== undefined).length}/${questions.length} questions answered.`,
-            url: window.location.href
-        };
-
-        if (navigator.share) {
-            try {
-                await navigator.share(shareData);
-            } catch (error) {
-                console.log('Share cancelled');
-            }
-        } else {
-            // Fallback: copy to clipboard
-            navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
-            toast({
-                title: "Copied to clipboard",
-                description: "Results have been copied to your clipboard!",
-            });
-        }
-    };
-
     // Calculate overall score
     const calculateOverallScore = () => {
         const answeredQuestions = questions.filter(q => q.score !== undefined);
@@ -234,7 +210,7 @@ export default function InterviewPrep({ onExit }: InterviewPrepProps) {
             }
             setIsRecording(false);
         } else {
-            // @ts-ignore
+            // @ts-expect-error - Browser speech recognition types not fully supported
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             const recognition = new SpeechRecognition();
             recognition.lang = "en-US";
