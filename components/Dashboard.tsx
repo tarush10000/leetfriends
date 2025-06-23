@@ -1028,7 +1028,7 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
                         {/* Audio Interview Card */}
                         <Card
                             className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm cursor-pointer hover:bg-slate-700/50 transition"
-                            onClick={() => setShowAudioInterview(true)}
+                            onClick={() => router.push("/interview")}
                         >
                             <CardHeader>
                                 <CardTitle className="text-white flex items-center">

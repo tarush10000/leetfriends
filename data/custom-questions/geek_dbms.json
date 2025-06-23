@@ -1,0 +1,680 @@
+{
+    "questions": [
+        {
+            "id": "dbms_q1",
+            "question": "What is a Database Management System (DBMS)?",
+            "topic": "dbms",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Software for managing and organizing databases",
+                "Provides interface for data operations: store, retrieve, update",
+                "Examples: MySQL, PostgreSQL, Oracle, SQL Server"
+            ]
+        },
+        {
+            "id": "dbms_q2",
+            "question": "What are the advantages of using a DBMS?",
+            "topic": "dbms",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Ensures data integrity and consistency",
+                "Provides data security and controlled access",
+                "Reduces redundancy with normalization",
+                "Supports efficient data retrieval and concurrency",
+                "Offers backup and recovery mechanisms"
+            ]
+        },
+        {
+            "id": "dbms_q3",
+            "question": "What is the difference between DBMS and RDBMS?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "DBMS doesn't enforce relational structure; RDBMS uses tables",
+                "RDBMS supports keys and relationships; DBMS may not",
+                "RDBMS examples: MySQL, Oracle; DBMS examples: Access, XML DB"
+            ]
+        },
+        {
+            "id": "dbms_q4",
+            "question": "What are the different types of DBMS?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Hierarchical DBMS: tree structure (e.g., IBM IMS)",
+                "Network DBMS: graph-based with many-to-many links",
+                "Relational DBMS: uses tables and SQL (e.g., MySQL)",
+                "Object-Oriented DBMS: stores data as objects"
+            ]
+        },
+        {
+            "id": "dbms_q5",
+            "question": "What is a relation in DBMS?",
+            "topic": "dbms",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "A table in a relational database",
+                "Consists of rows (records) and columns (attributes)",
+                "Defined by a schema specifying column types"
+            ]
+        },
+        {
+            "id": "dbms_q6",
+            "question": "What is a table in DBMS?",
+            "topic": "dbms",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Primary structure for storing data",
+                "Organized into rows and columns",
+                "Each row = entity, column = attribute"
+            ]
+        },
+        {
+            "id": "dbms_q7",
+            "question": "What are rows and columns in a DBMS?",
+            "topic": "dbms",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Rows = records (tuples), each row is a single entry",
+                "Columns = attributes, each column has a data type",
+                "Define structure and content of a table"
+            ]
+        },
+        {
+            "id": "dbms_q8",
+            "question": "What are the primary components of a DBMS?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Database Engine: handles data storage and retrieval",
+                "Query Processor: executes SQL queries",
+                "Transaction Manager: enforces ACID properties",
+                "Storage Manager and Database Schema"
+            ]
+        },
+        {
+            "id": "dbms_q9",
+            "question": "What is a primary key? Explain with an example.",
+            "topic": "dbms",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Unique identifier for records in a table",
+                "Cannot contain NULLs and must be unique",
+                "Example: ROLL_NO in STUDENT table"
+            ]
+        },
+        {
+            "id": "dbms_q10",
+            "question": "What is a foreign key? Explain with an example.",
+            "topic": "dbms",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Attribute linking to primary key of another table",
+                "Ensures referential integrity",
+                "Example: BRANCH_CODE in STUDENT referencing BRANCH"
+            ]
+        },
+        {
+            "id": "dbms_q11",
+            "question": "What is normalization? Why is it important in DBMS?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Organizing data to reduce redundancy",
+                "Improves integrity and consistency",
+                "Prevents anomalies during insert/update/delete"
+            ]
+        },
+        {
+            "id": "dbms_q12",
+            "question": "What is denormalization? How does it differ from normalization?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Combines tables for performance",
+                "Introduces redundancy for faster reads",
+                "Trade-off: speed vs. storage/integrity"
+            ]
+        },
+        {
+            "id": "dbms_q13",
+            "question": "What is a candidate key in DBMS?",
+            "topic": "dbms",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Attribute(s) that uniquely identify records",
+                "Multiple candidate keys possible per table",
+                "One is chosen as the primary key"
+            ]
+        },
+        {
+            "id": "dbms_q14",
+            "question": "What is the use of the SQL SELECT statement?",
+            "topic": "dbms",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Used to retrieve data from one or more tables",
+                "Supports filtering (WHERE), sorting (ORDER BY)",
+                "Can select specific columns or all columns"
+            ]
+        },
+        {
+            "id": "dbms_q15",
+            "question": "What is a view in DBMS? How does it differ from a table?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Virtual table created from a query",
+                "Does not store data physically",
+                "Presents dynamic, read-only result set"
+            ]
+        },
+        {
+            "id": "dbms_q16",
+            "question": "What are the different types of relationships in DBMS?",
+            "topic": "dbms",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "One-to-One",
+                "One-to-Many",
+                "Many-to-Many"
+            ]
+        },
+        {
+            "id": "dbms_q17",
+            "question": "Explain the concept of a schema in DBMS.",
+            "topic": "dbms",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Defines database structure: tables, views, constraints",
+                "Specifies how data is organized",
+                "Acts as blueprint for database"
+            ]
+        },
+        {
+            "id": "dbms_q18",
+            "question": "What are constraints in DBMS?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Rules for data integrity and validation",
+                "Examples: NOT NULL, PRIMARY KEY, FOREIGN KEY, UNIQUE, CHECK, DEFAULT",
+                "Prevent invalid data insertion"
+            ]
+        },
+        {
+            "id": "dbms_q19",
+            "question": "What is the difference between DELETE and TRUNCATE in SQL?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "DELETE: removes specific rows, can be rolled back",
+                "TRUNCATE: removes all rows, cannot be rolled back",
+                "TRUNCATE is faster, no row-level logging"
+            ]
+        },
+        {
+            "id": "dbms_q20",
+            "question": "What is an index in DBMS and how is it used?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Data structure for fast data lookup",
+                "Speeds up SELECT queries",
+                "Works like book index using key columns"
+            ]
+        },
+        {
+            "id": "dbms_q21",
+            "question": "What is the role of the Database Administrator (DBA)?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Designs and manages database structure",
+                "Handles backup, recovery, and performance tuning",
+                "Manages users, permissions, and security"
+            ]
+        },
+        {
+            "id": "dbms_q22",
+            "question": "What is an entity-relationship diagram (ERD)?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Visual representation of entities and relationships",
+                "Shows attributes and connections between tables",
+                "Used in database design to model structure"
+            ]
+        },
+        {
+            "id": "dbms_q23",
+            "question": "What is a join in SQL? Name and explain different types of joins.",
+            "topic": "dbms",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Combines rows from two or more tables based on related columns",
+                "INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL JOIN, CROSS JOIN, SELF JOIN",
+                "Used to retrieve related data across tables"
+            ]
+        },
+        {
+            "id": "dbms_q24",
+            "question": "What is a subquery in SQL? Provide an example.",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Query nested inside another SQL query",
+                "Can be single-row or multi-row",
+                "Used for filtering, comparison, or as derived table"
+            ]
+        },
+        {
+            "id": "dbms_q25",
+            "question": "What are aggregate functions in SQL? Name a few examples.",
+            "topic": "dbms",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Operate on a set of values to return a single value",
+                "Examples: COUNT(), SUM(), AVG(), MAX(), MIN()",
+                "Commonly used with GROUP BY clause"
+            ]
+        },
+        {
+            "id": "dbms_q26",
+            "question": "What is a transaction in DBMS? What are the properties of a transaction?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "A unit of work performed on the database",
+                "ACID properties: Atomicity, Consistency, Isolation, Durability",
+                "Ensures reliable database operations"
+            ]
+        },
+        {
+            "id": "dbms_q27",
+            "question": "What is the ACID property in DBMS?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Atomicity: all or none",
+                "Consistency: valid state transition",
+                "Isolation: no intermediate state visible",
+                "Durability: changes persist after commit"
+            ]
+        },
+        {
+            "id": "dbms_q28",
+            "question": "Explain the concept of a stored procedure in DBMS.",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Precompiled SQL statements stored in the database",
+                "Improves performance and reusability",
+                "Can take parameters and return results"
+            ]
+        },
+        {
+            "id": "dbms_q29",
+            "question": "What are triggers in DBMS? Provide an example.",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Procedures that execute automatically on table events",
+                "Used for enforcing business rules or logging",
+                "Examples: AFTER INSERT, BEFORE UPDATE"
+            ]
+        },
+        {
+            "id": "dbms_q30",
+            "question": "What is the difference between UNION and UNION ALL in SQL?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "UNION removes duplicates; UNION ALL retains them",
+                "UNION ALL is faster as it avoids deduplication",
+                "Both combine result sets of multiple queries"
+            ]
+        },
+        {
+            "id": "dbms_q31",
+            "question": "Explain the concept of indexing in DBMS.",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Improves query performance",
+                "Creates a fast lookup structure for columns",
+                "Can be single-column, composite, or unique"
+            ]
+        },
+        {
+            "id": "dbms_q32",
+            "question": "What is a normalization form? Explain different normalization forms.",
+            "topic": "dbms",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Process to reduce redundancy and anomalies",
+                "1NF: atomic columns; 2NF: full functional dependency",
+                "3NF: no transitive dependency; BCNF: stricter 3NF"
+            ]
+        },
+        {
+            "id": "dbms_q33",
+            "question": "What is the difference between INNER JOIN and OUTER JOIN?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "INNER JOIN: returns matching rows from both tables",
+                "OUTER JOIN: includes unmatched rows with NULLs",
+                "Types: LEFT, RIGHT, FULL OUTER JOIN"
+            ]
+        },
+        {
+            "id": "dbms_q34",
+            "question": "What is data redundancy in a database? How can it be reduced?",
+            "topic": "dbms",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Duplicate data stored in multiple places",
+                "Causes inconsistencies and waste of space",
+                "Reduced by normalization and constraints"
+            ]
+        },
+        {
+            "id": "dbms_q35",
+            "question": "What is a deadlock in DBMS? How can it be prevented?",
+            "topic": "dbms",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Two or more transactions wait for each other\u2019s resources",
+                "Prevention via lock ordering, timeouts, or deadlock detection",
+                "Can be resolved by rolling back one transaction"
+            ]
+        },
+        {
+            "id": "dbms_q36",
+            "question": "What is a database cursor? How is it used?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Pointer for row-by-row processing of query results",
+                "Types: implicit and explicit",
+                "Used in stored procedures and loops"
+            ]
+        },
+        {
+            "id": "dbms_q37",
+            "question": "What are the different types of database locks?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Shared Lock (S): read-only access",
+                "Exclusive Lock (X): write access",
+                "Intent, Update locks for concurrency control"
+            ]
+        },
+        {
+            "id": "dbms_q38",
+            "question": "What is the difference between a clustered and non-clustered index?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Clustered: sorts and stores data rows in index order",
+                "Non-clustered: stores pointers to data",
+                "One clustered index per table; many non-clustered allowed"
+            ]
+        },
+        {
+            "id": "dbms_q39",
+            "question": "What is the importance of the COMMIT and ROLLBACK operations?",
+            "topic": "dbms",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "COMMIT: saves transaction changes permanently",
+                "ROLLBACK: reverts changes to previous state",
+                "Ensure transaction consistency"
+            ]
+        },
+        {
+            "id": "dbms_q40",
+            "question": "What is the difference between a superkey and a candidate key?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Superkey: any combination that uniquely identifies a row",
+                "Candidate key: minimal superkey with no redundant attributes",
+                "Candidate keys are potential primary keys"
+            ]
+        },
+        {
+            "id": "dbms_q41",
+            "question": "What are the different types of constraints in DBMS? Give examples.",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "NOT NULL: disallows NULLs",
+                "PRIMARY KEY: unique + non-null",
+                "FOREIGN KEY: ensures referential integrity",
+                "UNIQUE: values must be distinct",
+                "CHECK: restricts column values",
+                "DEFAULT: sets default values"
+            ]
+        },
+        {
+            "id": "dbms_q42",
+            "question": "Explain the difference between a primary key and a unique key.",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Primary key: uniquely identifies rows, no NULLs",
+                "Unique key: ensures uniqueness, allows NULLs",
+                "Only one primary key, multiple unique keys allowed"
+            ]
+        },
+        {
+            "id": "dbms_q43",
+            "question": "What is referential integrity in DBMS?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Ensures foreign key matches a valid primary key",
+                "Maintains consistent relationships between tables",
+                "Prevents orphan records"
+            ]
+        },
+        {
+            "id": "dbms_q44",
+            "question": "How does DBMS handle concurrency control?",
+            "topic": "dbms",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Locking mechanisms: shared and exclusive locks",
+                "Timestamp ordering: enforces serializable schedule",
+                "Optimistic concurrency: checks before commit",
+                "Two-phase locking for consistency"
+            ]
+        },
+        {
+            "id": "dbms_q45",
+            "question": "What are the advantages of using foreign keys in DBMS?",
+            "topic": "dbms",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Enforces referential integrity",
+                "Helps cascade updates/deletes",
+                "Ensures valid relationships across tables"
+            ]
+        },
+        {
+            "id": "dbms_q46",
+            "question": "What is a transaction log in DBMS?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Records all transaction operations",
+                "Used for recovery and rollback",
+                "Includes before and after state of data"
+            ]
+        },
+        {
+            "id": "dbms_q47",
+            "question": "What is a materialized view in DBMS?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Stores query result physically",
+                "Improves performance for frequent queries",
+                "Used in reporting and data warehousing"
+            ]
+        },
+        {
+            "id": "dbms_q48",
+            "question": "What are the differences between an ER diagram and a relational schema?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "ERD: conceptual, shows entities and relationships",
+                "Relational schema: logical, defines tables and keys",
+                "ERD used in design phase; schema used in implementation"
+            ]
+        },
+        {
+            "id": "dbms_q49",
+            "question": "What is the purpose of the GROUP BY clause in SQL?",
+            "topic": "dbms",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Groups rows by column values",
+                "Used with aggregate functions",
+                "Returns one result per group"
+            ]
+        },
+        {
+            "id": "dbms_q50",
+            "question": "What are stored functions in DBMS?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Reusable SQL logic that returns a value",
+                "Accepts input parameters",
+                "Used for modular and optimized queries"
+            ]
+        },
+        {
+            "id": "dbms_q51",
+            "question": "What are the various types of normalization techniques? Explain with examples.",
+            "topic": "dbms",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "1NF: atomic values",
+                "2NF: no partial dependency",
+                "3NF: no transitive dependency",
+                "BCNF: every determinant is a candidate key"
+            ]
+        },
+        {
+            "id": "dbms_q52",
+            "question": "What are the different phases of the DBMS query processing cycle?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Parsing: syntax check",
+                "Translation: convert to internal format",
+                "Optimization: find best execution plan",
+                "Execution: perform query and return results"
+            ]
+        },
+        {
+            "id": "dbms_q53",
+            "question": "What are the different types of backups in DBMS?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Full: entire DB",
+                "Incremental: since last backup",
+                "Differential: since last full backup",
+                "Transaction log: logs changes for recovery"
+            ]
+        },
+        {
+            "id": "dbms_q54",
+            "question": "What is the use of the 'WITH CHECK OPTION' in SQL views?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Ensures updates/inserts follow view condition",
+                "Rejects data violating WHERE clause",
+                "Maintains view consistency"
+            ]
+        },
+        {
+            "id": "dbms_q55",
+            "question": "Explain the concept of a B-tree and B+ tree in DBMS.",
+            "topic": "dbms",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "B-tree: balanced tree with data in all nodes",
+                "B+ tree: data in leaf nodes, internal nodes for indexing",
+                "B+ tree is preferred for range queries and indexing"
+            ]
+        },
+        {
+            "id": "dbms_q56",
+            "question": "What is a hashing technique in DBMS? How does it work?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Maps keys to buckets using hash function",
+                "Used in hash indexes for fast access",
+                "Reduces lookup time in large datasets"
+            ]
+        },
+        {
+            "id": "dbms_q57",
+            "question": "What is the difference between a trigger and a stored procedure?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Trigger: auto-executed on events (INSERT, UPDATE)",
+                "Stored procedure: manually invoked",
+                "Trigger tied to a table, procedure is standalone"
+            ]
+        },
+        {
+            "id": "dbms_q58",
+            "question": "Explain the concept of data partitioning in DBMS.",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Splits large datasets into partitions",
+                "Types: horizontal, vertical, range, hash",
+                "Improves performance and scalability"
+            ]
+        },
+        {
+            "id": "dbms_q59",
+            "question": "What is the role of the DBMS in handling data integrity and security?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Data integrity via constraints and rules",
+                "Security via authentication and access control",
+                "Enforces consistent and authorized access"
+            ]
+        },
+        {
+            "id": "dbms_q60",
+            "question": "How is DBMS different from a file-based system?",
+            "topic": "dbms",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "DBMS uses structured schema, supports SQL",
+                "File-based systems lack ACID and relationships",
+                "DBMS offers better security, integrity, and concurrency"
+            ]
+        }
+    ],
+    "metadata": {
+        "source": "GeeksForGeeks",
+        "description": "Structured DBMS interview questions and concepts"
+    }
+}

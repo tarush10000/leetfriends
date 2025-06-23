@@ -1,0 +1,1151 @@
+{
+    "questions": [
+        {
+            "id": "process_definition",
+            "question": "What is a process and process table?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "A process is an instance of a program in execution",
+                "Managed by OS for resource allocation and CPU scheduling",
+                "OS maintains process table to track resources and process states"
+            ]
+        },
+        {
+            "id": "process_states",
+            "question": "What are the different states of the process?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Running: process has CPU and is executing",
+                "Ready: waiting for CPU time",
+                "Waiting: waiting for an event like I/O",
+                "States are implemented as queues by OS"
+            ]
+        },
+        {
+            "id": "thread_definition",
+            "question": "What is a Thread?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Thread is a lightweight process with its own stack and registers",
+                "Shares memory and resources with other threads in same process",
+                "Improves parallelism in applications like browsers and word processors"
+            ]
+        },
+        {
+            "id": "process_vs_thread",
+            "question": "What are the differences between process and thread?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Processes are independent; threads share memory space",
+                "Threads have less overhead and are faster for communication",
+                "Processes use separate PCB; threads use shared TCB with own stack"
+            ]
+        },
+        {
+            "id": "multithreading_benefits",
+            "question": "What are the benefits of multithreaded programming?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Increased responsiveness and better resource sharing",
+                "Efficient in multiprocessor systems",
+                "Economical with reduced overhead",
+                "Preferred for parallel processing tasks"
+            ]
+        },
+        {
+            "id": "thrashing_definition",
+            "question": "What is Thrashing?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "System spends more time handling page faults than executing processes",
+                "Occurs due to high page fault rate",
+                "Degrades performance due to frequent disk access",
+                "Results from overcommitment of memory"
+            ]
+        },
+        {
+            "id": "virtual_memory",
+            "question": "What is virtual memory?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Creates illusion of large contiguous memory using disk",
+                "Processes access memory without knowing physical storage location",
+                "Memory is divided into pages loaded on demand",
+                "Helps run large programs and improves memory utilization"
+            ]
+        },
+        {
+            "id": "demand_paging",
+            "question": "What is demand paging?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Pages are loaded into memory only when needed",
+                "Reduces memory usage",
+                "Leads to page faults when pages are not in memory",
+                "Improves efficiency in memory management"
+            ]
+        },
+        {
+            "id": "kernel_definition",
+            "question": "What is a kernel?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Core component of the OS",
+                "Manages memory, CPU, and device control",
+                "Acts as bridge between apps and hardware",
+                "Uses system calls for communication with hardware"
+            ]
+        },
+        {
+            "id": "scheduling_algorithms",
+            "question": "What are the different scheduling algorithms?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "First-Come, First-Served (FCFS)",
+                "Shortest Job Next (SJN)",
+                "Priority Scheduling",
+                "Shortest Remaining Time",
+                "Round Robin (RR)",
+                "Multi-Level Queue Scheduling"
+            ]
+        },
+        {
+            "id": "os_objective",
+            "question": "Explain the main purpose of an operating system.",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Acts as intermediary between user and hardware",
+                "Manages hardware resources like CPU, memory, I/O",
+                "Provides user interface for executing programs",
+                "Ensures proper coordination and error handling"
+            ]
+        },
+        {
+            "id": "time_sharing",
+            "question": "What is the time-sharing system?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Extension of multiprogramming",
+                "Enables multiple users to interact with system",
+                "CPU switches frequently to give illusion of parallel execution",
+                "Improves response time for interactive systems"
+            ]
+        },
+        {
+            "id": "ipc_definition",
+            "question": "What is IPC?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Inter-Process Communication",
+                "Allows processes to communicate and synchronize",
+                "Essential for cooperation in multi-process systems",
+                "Uses mechanisms like pipes, shared memory, semaphores"
+            ]
+        },
+        {
+            "id": "deadlock_conditions",
+            "question": "What are the necessary conditions which can lead to a deadlock in a system?",
+            "topic": "os",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Mutual Exclusion: resource not shareable",
+                "Hold and Wait: process holding resource waiting for others",
+                "No Preemption: resource cannot be forcibly taken",
+                "Circular Wait: closed chain of processes waiting for each other"
+            ]
+        },
+        {
+            "id": "bankers_algorithm",
+            "question": "What is Banker\u2019s algorithm?",
+            "topic": "os",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Deadlock avoidance algorithm",
+                "Checks for safe state before allocating resources",
+                "Simulates future resource requests",
+                "Ensures system will remain deadlock-free"
+            ]
+        },
+        {
+            "id": "thrashing_occurrence",
+            "question": "When does thrashing occur?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "High page fault rate",
+                "More time spent in paging than executing processes",
+                "Occurs when memory is overcommitted",
+                "Performance degradation due to excessive swapping"
+            ]
+        },
+        {
+            "id": "context_switching",
+            "question": "What is Context Switching?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Switching CPU from one process to another",
+                "Saves and restores process state in PCB",
+                "Essential for multitasking",
+                "Involves overhead due to saving registers, stack, etc."
+            ]
+        },
+        {
+            "id": "critical_section",
+            "question": "What is a critical-section?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Code section accessing shared resources",
+                "Must be executed atomically",
+                "Needs synchronization to avoid race conditions",
+                "Protected using mutex, semaphores, etc."
+            ]
+        },
+        {
+            "id": "semaphores_advantages",
+            "question": "What are the advantages of semaphores?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Effective for process synchronization",
+                "Avoid busy waiting",
+                "Machine-independent",
+                "Can manage multiple critical sections"
+            ]
+        },
+        {
+            "id": "synchronization_problems",
+            "question": "Write a name of classic synchronization problems?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Bounded-buffer",
+                "Readers-writers",
+                "Dining philosophers",
+                "Sleeping barber"
+            ]
+        },
+        {
+            "id": "paging_function",
+            "question": "What is the basic function of paging?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Provides non-contiguous memory allocation",
+                "Divides memory into fixed-size pages and frames",
+                "Fetches process parts from secondary memory to main memory",
+                "Improves memory utilization and avoids external fragmentation"
+            ]
+        },
+        {
+            "id": "scheduling_goals",
+            "question": "What are the goals of CPU scheduling?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Max CPU utilization",
+                "Max throughput",
+                "Min turnaround time",
+                "Min waiting time",
+                "Min response time",
+                "Fair allocation of CPU"
+            ]
+        },
+        {
+            "id": "fragmentation_types",
+            "question": "Write a difference between internal fragmentation and external fragmentation?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Internal: Unused space within allocated memory blocks",
+                "External: Unused scattered space between memory allocations",
+                "Internal caused by fixed partitions",
+                "External caused by variable partitions",
+                "Solutions: best-fit, compaction, paging"
+            ]
+        },
+        {
+            "id": "context_switching_definition",
+            "question": "What is Context Switching?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Saving current process state",
+                "Loading the saved state of the new process",
+                "Performed by the OS",
+                "Enables multitasking"
+            ]
+        },
+        {
+            "id": "multitasking_definition",
+            "question": "What is multitasking?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Running multiple tasks simultaneously",
+                "Tasks share CPU resources",
+                "Implemented via context switching"
+            ]
+        },
+        {
+            "id": "belady_anomaly",
+            "question": "What is Belady's Anomaly?",
+            "topic": "os",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Occurs in FIFO page replacement",
+                "Increasing page frames increases page faults",
+                "Unexpected behavior violating intuition",
+                "Does not occur in LRU or optimal algorithms"
+            ]
+        },
+        {
+            "id": "zombie_process",
+            "question": "What is a zombie process?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Process completed but still in process table",
+                "Exists to report status to parent process",
+                "Removed after parent collects exit status",
+                "Consumes no system resources except table entry"
+            ]
+        },
+        {
+            "id": "orphan_process",
+            "question": "What is an orphan process?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Parent process terminated before child",
+                "Child is adopted by init process",
+                "Handled by OS to prevent resource leakage"
+            ]
+        },
+        {
+            "id": "disk_latency",
+            "question": "What is rotational latency?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Time for desired disk sector to rotate under R/W head",
+                "Affects disk read/write speed",
+                "Part of total disk access time"
+            ]
+        },
+        {
+            "id": "seek_time",
+            "question": "What is seek time?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Time to move disk arm to desired track",
+                "Combined with latency for total access time",
+                "Lower seek time improves disk performance"
+            ]
+        },
+        {
+            "id": "real_time_system",
+            "question": "What are real-time systems?",
+            "topic": "os",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Systems with strict timing constraints",
+                "Must meet deadlines to function correctly",
+                "Used in embedded systems, control systems, etc."
+            ]
+        },
+        {
+            "id": "deadlock_recovery",
+            "question": "How to recover from a deadlock?",
+            "topic": "os",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Terminate processes",
+                "Abort all or one-by-one until safe",
+                "Resource preemption",
+                "Rollback and restart process"
+            ]
+        },
+        {
+            "id": "os_q33",
+            "question": "What is a bootstrap program in the OS?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Executed on system startup to load the OS",
+                "Performs hardware diagnostics like POST",
+                "Initializes OS using the bootloader"
+            ]
+        },
+        {
+            "id": "os_q34",
+            "question": "What is IPC?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Inter-process communication mechanism",
+                "Allows processes to exchange data",
+                "Used for synchronization and coordination"
+            ]
+        },
+        {
+            "id": "os_q35",
+            "question": "What are the different IPC mechanisms?",
+            "topic": "os",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Pipes, Named Pipes (FIFOs)",
+                "Message Queues, Semaphores, Shared Memory",
+                "Sockets for network communication"
+            ]
+        },
+        {
+            "id": "os_q36",
+            "question": "What is the difference between preemptive and non-preemptive scheduling?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Preemptive: CPU can be taken mid-execution",
+                "Non-preemptive: CPU runs till process completes or waits",
+                "Preemptive allows better responsiveness; non-preemptive is simpler"
+            ]
+        },
+        {
+            "id": "os_q37",
+            "question": "What is a pipe and when is it used?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Used for inter-process communication",
+                "Transfers output of one process to another's input",
+                "Unidirectional and needs related processes"
+            ]
+        },
+        {
+            "id": "os_q38",
+            "question": "What are the advantages of semaphores?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Easy to implement",
+                "Can be used to manage multiple critical sections",
+                "No busy waiting",
+                "Machine independent"
+            ]
+        },
+        {
+            "id": "os_q39",
+            "question": "What is a bootstrap program in the OS?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Initial program executed when the computer starts",
+                "Performs hardware checks and loads the OS",
+                "Located in ROM and loads the kernel"
+            ]
+        },
+        {
+            "id": "os_q40",
+            "question": "What is a trap and trapdoor?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Trap: Software interrupt, often due to an error or system call",
+                "Trapdoor: Secret entry point into a program, bypassing authentication",
+                "Used in debugging and OS service routines"
+            ]
+        },
+        {
+            "id": "os_q41",
+            "question": "What is preemptive multitasking?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "OS allocates CPU to processes based on predefined rules",
+                "Processes can be interrupted and context switched",
+                "Improves responsiveness of the system"
+            ]
+        },
+        {
+            "id": "os_q42",
+            "question": "What are starvation and aging in OS?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Starvation: A process is perpetually denied access to resources",
+                "Aging: Technique to prevent starvation by gradually increasing priority",
+                "Used in scheduling algorithms"
+            ]
+        },
+        {
+            "id": "os_q43",
+            "question": "What is context switching?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Switching the CPU from one process to another",
+                "Involves saving and loading process states",
+                "Allows multitasking but adds overhead"
+            ]
+        },
+        {
+            "id": "os_q44",
+            "question": "What is a monolithic kernel?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "All OS services run in kernel space",
+                "Faster execution due to shared memory space",
+                "Less modular, harder to maintain"
+            ]
+        },
+        {
+            "id": "os_q45",
+            "question": "What is a dispatcher?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Module that gives CPU control to the selected process",
+                "Performs context switching",
+                "Switches to user mode and jumps to process code"
+            ]
+        },
+        {
+            "id": "os_q46",
+            "question": "Define dispatch latency.",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Time taken to stop one process and start another",
+                "Includes saving context and loading new context",
+                "Should be minimized for real-time systems"
+            ]
+        },
+        {
+            "id": "os_q47",
+            "question": "What are the necessary conditions for a deadlock?",
+            "topic": "os",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Mutual Exclusion",
+                "Hold and Wait",
+                "No Preemption",
+                "Circular Wait"
+            ]
+        },
+        {
+            "id": "os_q48",
+            "question": "What is Context Switching?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Saving the state of a currently running process",
+                "Loading the state of the next scheduled process",
+                "Involves switching CPU control between processes"
+            ]
+        },
+        {
+            "id": "os_q49",
+            "question": "What is the difference between the Operating system and kernel?",
+            "topic": "os",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "OS is system software; kernel is the core component",
+                "OS provides UI and resource management; kernel handles low-level operations",
+                "Kernel interfaces directly with hardware"
+            ]
+        },
+        {
+            "id": "os_q50",
+            "question": "What is the difference between process and thread?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Process is a heavyweight execution unit; thread is lightweight",
+                "Processes have separate memory; threads share address space",
+                "Threads are faster and used for multitasking within a process"
+            ]
+        },
+        {
+            "id": "os_q51",
+            "question": "What is PCB?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "PCB: Process Control Block",
+                "Contains process-specific information like registers, priority, program counter",
+                "Used by OS to manage and switch processes"
+            ]
+        },
+        {
+            "id": "os_q52",
+            "question": "When is a system in a safe state?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "A state where all processes can complete without deadlock",
+                "Exists a sequence in which each process can get its maximum resources",
+                "Ensured by algorithms like Banker's Algorithm"
+            ]
+        },
+        {
+            "id": "os_q53",
+            "question": "What is Cycle Stealing?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "DMA technique allowing peripherals to access memory",
+                "Access memory during CPU idle cycles",
+                "Does not interfere with CPU tasks"
+            ]
+        },
+        {
+            "id": "os_q54",
+            "question": "What are a Trap and Trapdoor?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Trap: Software-generated interrupt for errors/system calls",
+                "Trapdoor: Secret entry bypassing normal access",
+                "Trap used by OS for exception handling"
+            ]
+        },
+        {
+            "id": "os_q55",
+            "question": "Write a difference between program and process?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Program: Passive entity stored on disk",
+                "Process: Active entity with resources and execution",
+                "Program becomes process when loaded into memory"
+            ]
+        },
+        {
+            "id": "os_q56",
+            "question": "What is a dispatcher?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Module that assigns CPU to selected process",
+                "Handles context switching and transfer to user mode",
+                "Executes program restart after scheduling"
+            ]
+        },
+        {
+            "id": "os_q57",
+            "question": "Define the term dispatch latency?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Time taken to stop one process and start another",
+                "Includes saving/restoring process state",
+                "Critical for real-time system performance"
+            ]
+        },
+        {
+            "id": "os_q58",
+            "question": "What are the goals of CPU scheduling?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Maximize CPU utilization and throughput",
+                "Minimize waiting time, turnaround time, response time",
+                "Ensure fair allocation of resources"
+            ]
+        },
+        {
+            "id": "os_q59",
+            "question": "What is a critical-section?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Portion of code accessing shared resources",
+                "Must be executed atomically to prevent race conditions",
+                "Requires synchronization mechanisms"
+            ]
+        },
+        {
+            "id": "os_q60",
+            "question": "Write the name of synchronization techniques?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Mutexes",
+                "Semaphores",
+                "Condition variables",
+                "File locks"
+            ]
+        },
+        {
+            "id": "os_q61",
+            "question": "What is the difference between a user-level thread and a kernel-level thread?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "User-level threads are managed by user libraries, invisible to OS",
+                "Kernel-level threads are managed by OS and visible to kernel",
+                "User-level threads are faster but less powerful"
+            ]
+        },
+        {
+            "id": "os_q62",
+            "question": "Write down the advantages of multithreading.",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Improved application responsiveness",
+                "Efficient resource usage and CPU utilization",
+                "Supports parallelism and better structure for complex apps"
+            ]
+        },
+        {
+            "id": "os_q63",
+            "question": "Difference between Multithreading and Multitasking?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Multithreading: Multiple threads within a single process",
+                "Multitasking: Execution of multiple processes",
+                "Threads share memory, processes are isolated"
+            ]
+        },
+        {
+            "id": "os_q64",
+            "question": "What are the drawbacks of semaphores?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Priority inversion risk",
+                "Requires careful management of wait/signal",
+                "Potential for deadlocks and complexity"
+            ]
+        },
+        {
+            "id": "os_q65",
+            "question": "What is Peterson's approach?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Software-based mutual exclusion for 2 processes",
+                "Uses turn and flag variables",
+                "Guarantees mutual exclusion and progress"
+            ]
+        },
+        {
+            "id": "os_q66",
+            "question": "Define the term Bounded waiting.",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Guarantees a process will enter critical section within a bound",
+                "Prevents indefinite postponement",
+                "Important for fairness in scheduling"
+            ]
+        },
+        {
+            "id": "os_q67",
+            "question": "What are the solutions to the critical section problem?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Software solutions like Peterson\u2019s Algorithm",
+                "Hardware solutions using test-and-set",
+                "Semaphores and Mutexes"
+            ]
+        },
+        {
+            "id": "os_q68",
+            "question": "What is a Banker's algorithm?",
+            "topic": "os",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Deadlock avoidance algorithm",
+                "Simulates resource allocation to check system safety",
+                "Grants requests only if system remains in safe state"
+            ]
+        },
+        {
+            "id": "os_q69",
+            "question": "What is concurrency?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Multiple processes active at same time",
+                "Processes progress independently or in overlapping fashion",
+                "Requires coordination and synchronization"
+            ]
+        },
+        {
+            "id": "os_q70",
+            "question": "Write a drawback of concurrency.",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Increased complexity and need for synchronization",
+                "Risk of race conditions and deadlocks",
+                "Performance overhead from context switching"
+            ]
+        },
+        {
+            "id": "os_q71",
+            "question": "What are the necessary conditions which can lead to a deadlock in a system?",
+            "topic": "os",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Mutual Exclusion",
+                "Hold and Wait",
+                "No Preemption",
+                "Circular Wait"
+            ]
+        },
+        {
+            "id": "os_q72",
+            "question": "What are the issues related to concurrency?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Race conditions",
+                "Blocking and deadlocks",
+                "Starvation and synchronization overhead"
+            ]
+        },
+        {
+            "id": "os_q73",
+            "question": "Why do we use precedence graphs?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Represents execution order of statements",
+                "Used to model dependencies and optimize execution",
+                "Helps detect instruction-level parallelism"
+            ]
+        },
+        {
+            "id": "os_q74",
+            "question": "Explain the resource allocation graph.",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Visual representation of processes and resources",
+                "Used to detect deadlocks",
+                "Cycle in the graph indicates possible deadlock"
+            ]
+        },
+        {
+            "id": "os_q75",
+            "question": "What is a deadlock?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Two or more processes wait indefinitely for each other",
+                "Resources held and requested in circular fashion",
+                "System halts due to unresolvable blocking"
+            ]
+        },
+        {
+            "id": "os_q76",
+            "question": "What is the goal and functionality of memory management?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Efficient allocation and deallocation of memory",
+                "Provides protection and isolation",
+                "Handles logical and physical memory mapping"
+            ]
+        },
+        {
+            "id": "os_q77",
+            "question": "Write a difference between physical address and logical address.",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Logical address generated by CPU; physical by MMU",
+                "Users access logical address, hardware accesses physical",
+                "Mapping done via address binding"
+            ]
+        },
+        {
+            "id": "os_q78",
+            "question": "Explain address binding.",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Mapping of logical addresses to physical addresses",
+                "Done at compile-time, load-time, or execution-time",
+                "Execution-time binding supports dynamic relocation"
+            ]
+        },
+        {
+            "id": "os_q79",
+            "question": "Write different types of address binding.",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Compile-time address binding",
+                "Load-time address binding",
+                "Execution-time address binding"
+            ]
+        },
+        {
+            "id": "os_q80",
+            "question": "Write an advantage of dynamic allocation algorithms.",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Efficient memory usage for varying requirements",
+                "Allows flexible data structures like linked lists",
+                "Enables allocation at runtime as per program need"
+            ]
+        },
+        {
+            "id": "os_q81",
+            "question": "Write a difference between internal fragmentation and external fragmentation.",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Internal: Wasted space within allocated block",
+                "External: Unused space between blocks",
+                "Solutions: best-fit (internal), compaction (external)"
+            ]
+        },
+        {
+            "id": "os_q82",
+            "question": "Define the Compaction.",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Combines free memory fragments into a single block",
+                "Improves memory allocation",
+                "Done by shifting programs and data in memory"
+            ]
+        },
+        {
+            "id": "os_q83",
+            "question": "Write about the advantages and disadvantages of a hashed-page table.",
+            "topic": "os",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Efficient search with hashing",
+                "Reduces collisions in large virtual address spaces",
+                "Downside: potential for collisions and higher complexity"
+            ]
+        },
+        {
+            "id": "os_q84",
+            "question": "Write a difference between paging and segmentation.",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Paging: fixed-size blocks; Segmentation: variable-sized blocks",
+                "Paging managed by OS; segmentation by compiler/user",
+                "Paging may cause internal fragmentation, segmentation external"
+            ]
+        },
+        {
+            "id": "os_q85",
+            "question": "Write a definition of Associative Memory and Cache Memory.",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Associative Memory: Accessed by content, used in TLBs",
+                "Cache Memory: Fast, small memory between CPU and RAM",
+                "Both reduce access times"
+            ]
+        },
+        {
+            "id": "os_q86",
+            "question": "What is 'Locality of reference'?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Tendency to access same memory locations repeatedly",
+                "Improves cache performance",
+                "Includes temporal and spatial locality"
+            ]
+        },
+        {
+            "id": "os_q87",
+            "question": "Write down the advantages of virtual memory.",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Supports large programs beyond physical RAM",
+                "Eliminates external fragmentation",
+                "Improves process isolation and system performance"
+            ]
+        },
+        {
+            "id": "os_q88",
+            "question": "How to calculate performance in virtual memory?",
+            "topic": "os",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Effective Access Time = (1-p)*ma + p*pf",
+                "p = page fault rate, ma = memory access time, pf = page fault time",
+                "Lower page faults improve performance"
+            ]
+        },
+        {
+            "id": "os_q89",
+            "question": "Write down the basic concept of the file system.",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "File: Logical collection of related data",
+                "File system manages storage and retrieval",
+                "Provides operations like create, read, write, delete"
+            ]
+        },
+        {
+            "id": "os_q90",
+            "question": "Write the names of different operations on file.",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Create, Open, Read, Write",
+                "Rename, Delete, Append, Truncate, Close"
+            ]
+        },
+        {
+            "id": "os_q91",
+            "question": "Define the term Bit-Vector.",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Bit array representing memory/disk blocks",
+                "0 = used, 1 = free",
+                "Used for efficient space management"
+            ]
+        },
+        {
+            "id": "os_q92",
+            "question": "What is a File Allocation Table?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Table used to track file storage locations",
+                "Used in FAT systems",
+                "Manages file blocks and clusters"
+            ]
+        },
+        {
+            "id": "os_q93",
+            "question": "What is rotational latency?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Time for disk sector to rotate under R/W head",
+                "Part of total disk access time",
+                "Lower latency means faster disk access"
+            ]
+        },
+        {
+            "id": "os_q94",
+            "question": "What is seek time?",
+            "topic": "os",
+            "difficulty": "Easy",
+            "expectedPoints": [
+                "Time to move disk arm to required track",
+                "Lower seek time = better performance",
+                "Part of disk access delay"
+            ]
+        },
+        {
+            "id": "os_q95",
+            "question": "What is Belady's Anomaly?",
+            "topic": "os",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Increasing page frames increases page faults",
+                "Occurs in FIFO page replacement",
+                "Does not occur in LRU/optimal replacement"
+            ]
+        },
+        {
+            "id": "os_q96",
+            "question": "What happens if a non-recursive mutex is locked more than once?",
+            "topic": "os",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Causes deadlock",
+                "Thread blocks waiting on itself",
+                "Needs recursive mutex or design fix"
+            ]
+        },
+        {
+            "id": "os_q97",
+            "question": "What are the advantages of a multiprocessor system?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Higher throughput and performance",
+                "Parallel task execution",
+                "Better fault tolerance and resource sharing"
+            ]
+        },
+        {
+            "id": "os_q98",
+            "question": "What are real-time systems?",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "System with strict timing constraints",
+                "Must respond within deadlines",
+                "Used in embedded and control systems"
+            ]
+        },
+        {
+            "id": "os_q99",
+            "question": "How to recover from a deadlock?",
+            "topic": "os",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Process termination",
+                "Resource preemption",
+                "Rollback and restart"
+            ]
+        },
+        {
+            "id": "os_q100",
+            "question": "What factors determine whether a detection algorithm must be used in deadlock avoidance?",
+            "topic": "os",
+            "difficulty": "Hard",
+            "expectedPoints": [
+                "Frequency of deadlocks",
+                "Number of affected processes",
+                "Overhead of running detection algorithm"
+            ]
+        },
+        {
+            "id": "os_q101",
+            "question": "Explain the resource allocation graph.",
+            "topic": "os",
+            "difficulty": "Medium",
+            "expectedPoints": [
+                "Represents processes and resources",
+                "Used for deadlock detection",
+                "Cycle in graph indicates potential deadlock"
+            ]
+        }
+    ],
+    "metadata": {
+        "source": "GeeksForGeeks",
+        "description": "Comprehensive Operating System Interview Questions with key points"
+    }
+}

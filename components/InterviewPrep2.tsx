@@ -1,4 +1,4 @@
-// components/InterviewPrep2.tsx - Enhanced UI with scrollable design and immediate feedback
+// components/InterviewPrep2.tsx - Enhanced with Show Answer functionality
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Mic, MicOff, Play, Pause, SkipForward, Volume2, VolumeX,
     ChevronRight, Trophy, Clock, Target, Brain, Sparkles,
-    CheckCircle, AlertCircle, Download, Share2, X, FileText
+    CheckCircle, AlertCircle, Download, Share2, X, FileText,
+    Eye, EyeOff, Lightbulb, BookOpen, HelpCircle, BarChart3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,6 +66,7 @@ export default function InterviewPrep({ onExit }: InterviewPrepProps) {
     const [speechRecognition, setSpeechRecognition] = useState<any>(null);
     const [showFeedback, setShowFeedback] = useState(false);
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+    const [showAnswer, setShowAnswer] = useState(false);
 
     const { toast } = useToast();
 
@@ -113,6 +115,7 @@ export default function InterviewPrep({ onExit }: InterviewPrepProps) {
                 if (currentQuestionIndex < questions.length - 1) {
                     setCurrentQuestionIndex(currentQuestionIndex + 1);
                     setCurrentAnswer("");
+                    setShowAnswer(false); // Reset show answer for next question
                 } else {
                     // Interview completed
                     setStage('results');
@@ -142,7 +145,8 @@ export default function InterviewPrep({ onExit }: InterviewPrepProps) {
                     score: q.score || 0,
                     feedback: q.feedback || [],
                     topic: q.topic,
-                    difficulty: q.difficulty
+                    difficulty: q.difficulty,
+                    expectedPoints: q.expectedPoints // Include expected points in PDF
                 })),
                 overallScore: calculateOverallScore(),
                 totalQuestions: questions.length,
@@ -245,6 +249,7 @@ export default function InterviewPrep({ onExit }: InterviewPrepProps) {
             setCurrentQuestionIndex(currentQuestionIndex + 1);
             setCurrentAnswer("");
             setShowFeedback(false);
+            setShowAnswer(false); // Reset show answer for next question
         } else {
             setStage('results');
         }
@@ -260,36 +265,25 @@ export default function InterviewPrep({ onExit }: InterviewPrepProps) {
             });
             return;
         }
-        
+
         setLoading(true);
         try {
-            // Add randomization seed to ensure different questions each time
-            const randomSeed = Math.random().toString(36).substring(7);
-            const timestamp = Date.now();
-            
             const response = await fetch('/api/interview-prep/generate-questions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     numberOfQuestions: settings.numberOfQuestions,
-                    topics: settings.topics,
-                    randomSeed: randomSeed,
-                    timestamp: timestamp,
-                    // Add user-specific data to ensure uniqueness
-                    sessionId: `${timestamp}-${randomSeed}`
+                    topics: settings.topics
                 })
             });
-            
+
             if (!response.ok) throw new Error('Failed to generate questions');
-            
+
             const data = await response.json();
             setQuestions(data.questions);
-            setCurrentQuestionIndex(0);
-            setCurrentAnswer("");
             setStage('interview');
-            
         } catch (error) {
-            console.error('Question generation error:', error);
+            console.error('Error generating questions:', error);
             toast({
                 title: "Error",
                 description: "Failed to generate questions. Please try again.",
@@ -300,448 +294,531 @@ export default function InterviewPrep({ onExit }: InterviewPrepProps) {
         }
     };
 
+    // Get difficulty color
+    const getDifficultyColor = (difficulty: string) => {
+        switch (difficulty) {
+            case 'Easy': return 'text-green-400 bg-green-400/10 border-green-400/30';
+            case 'Medium': return 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30';
+            case 'Hard': return 'text-red-400 bg-red-400/10 border-red-400/30';
+            default: return 'text-slate-400 bg-slate-400/10 border-slate-400/30';
+        }
+    };
+
+    // Get topic color
+    const getTopicColor = (topic: string) => {
+        const topicData = AVAILABLE_TOPICS.find(t => t.id === topic);
+        return topicData?.color || 'bg-gray-500';
+    };
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950">
-            {/* Exit Button - Only show if onExit is provided */}
-            {onExit && (
-                <div className="absolute top-4 right-4 z-50">
-                    <Button
-                        onClick={onExit}
-                        variant="ghost"
-                        size="icon"
-                        className="text-slate-400 hover:text-white hover:bg-slate-800"
+        <div className="flex flex-col h-full">
+            <AnimatePresence mode="wait">
+                {stage === 'setup' && (
+                    <motion.div
+                        key="setup"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex-1 flex items-center justify-center"
                     >
-                        <X className="w-5 h-5" />
-                    </Button>
-                </div>
-            )}
+                        <Card className="bg-slate-800/50 border-slate-700/50 w-full max-w-md">
+                            <CardHeader>
+                                <CardTitle className="text-white flex items-center justify-center text-2xl">
+                                    <Sparkles className="w-6 h-6 mr-2 text-purple-400" />
+                                    Interview Setup
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {/* Number of Questions */}
+                                <div className="space-y-2">
+                                    <Label className="text-white">Number of Questions</Label>
+                                    <Input
+                                        type="number"
+                                        min="1"
+                                        max="20"
+                                        value={settings.numberOfQuestions}
+                                        onChange={(e) => setSettings({
+                                            ...settings,
+                                            numberOfQuestions: parseInt(e.target.value) || 5
+                                        })}
+                                        className="bg-slate-900/50 border-slate-600 text-white"
+                                    />
+                                </div>
 
-            <div className="container mx-auto p-4 h-screen flex flex-col max-w-[1400px]">
-                <AnimatePresence mode="wait">
-                    {stage === 'setup' && (
-                        <motion.div
-                            key="setup"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            className="max-w-3xl mx-auto flex-1 flex items-center justify-center"
-                        >
-                            <Card className="bg-slate-800/50 border-slate-700/50 w-full">
-                                <CardHeader>
-                                    <CardTitle className="text-white flex items-center justify-center text-2xl">
-                                        <Sparkles className="w-6 h-6 mr-2 text-purple-400" />
-                                        Interview Setup
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    {/* Number of Questions */}
-                                    <div className="space-y-2">
-                                        <Label className="text-white">Number of Questions</Label>
-                                        <Input
-                                            type="number"
-                                            min="1"
-                                            max="20"
-                                            value={settings.numberOfQuestions}
-                                            onChange={(e) => setSettings({
-                                                ...settings,
-                                                numberOfQuestions: parseInt(e.target.value) || 5
-                                            })}
-                                            className="bg-slate-900/50 border-slate-600 text-white"
-                                        />
-                                    </div>
-
-                                    {/* Topics Selection */}
-                                    <div className="space-y-3">
-                                        <Label className="text-white">Select Topics</Label>
-                                        <div className="grid grid-cols-1 gap-3">
-                                            {AVAILABLE_TOPICS.map((topic) => (
-                                                <div
-                                                    key={topic.id}
-                                                    className="flex items-center space-x-3 p-3 rounded-lg bg-slate-800/30 cursor-pointer hover:bg-slate-700/50 transition-colors"
-                                                    onClick={() => {
-                                                        const newTopics = settings.topics.includes(topic.id)
-                                                            ? settings.topics.filter(t => t !== topic.id)
-                                                            : [...settings.topics, topic.id];
-                                                        setSettings({ ...settings, topics: newTopics });
-                                                    }}
-                                                >
-                                                    <Checkbox
-                                                        checked={settings.topics.includes(topic.id)}
-                                                        onCheckedChange={() => {}}
-                                                    />
-                                                    <div className="flex items-center gap-2 flex-1">
-                                                        <div className={`w-3 h-3 rounded-full ${topic.color}`} />
-                                                        <span className="text-sm text-white">{topic.label}</span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Features - Only Speech-to-Text */}
-                                    <div className="space-y-3">
-                                        <Label className="text-white">Interview Features</Label>
-                                        <div className="space-y-2">
-                                            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/30">
-                                                <span className="text-sm text-white">Enable Speech-to-Text</span>
+                                {/* Topics Selection */}
+                                <div className="space-y-3">
+                                    <Label className="text-white">Select Topics</Label>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {AVAILABLE_TOPICS.map((topic) => (
+                                            <div
+                                                key={topic.id}
+                                                className="flex items-center space-x-3 p-3 rounded-lg bg-slate-800/30 cursor-pointer hover:bg-slate-700/50 transition-colors"
+                                                onClick={() => {
+                                                    const newTopics = settings.topics.includes(topic.id)
+                                                        ? settings.topics.filter(t => t !== topic.id)
+                                                        : [...settings.topics, topic.id];
+                                                    setSettings({ ...settings, topics: newTopics });
+                                                }}
+                                            >
                                                 <Checkbox
-                                                    checked={settings.enableSTT}
-                                                    onCheckedChange={(checked: boolean) =>
-                                                        setSettings({ ...settings, enableSTT: checked })
-                                                    }
+                                                    checked={settings.topics.includes(topic.id)}
+                                                    onCheckedChange={() => {}}
                                                 />
+                                                <div className="flex items-center gap-2 flex-1">
+                                                    <div className={`w-3 h-3 rounded-full ${topic.color}`} />
+                                                    <span className="text-sm text-white">{topic.label}</span>
+                                                </div>
                                             </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Features - Only Speech-to-Text */}
+                                <div className="space-y-3">
+                                    <Label className="text-white">Interview Features</Label>
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/30">
+                                            <span className="text-sm text-white">Enable Speech-to-Text</span>
+                                            <Checkbox
+                                                checked={settings.enableSTT}
+                                                onCheckedChange={(checked: boolean) =>
+                                                    setSettings({ ...settings, enableSTT: checked })
+                                                }
+                                            />
                                         </div>
                                     </div>
-
-                                    {/* Start Button */}
-                                    <Button
-                                        onClick={startInterview}
-                                        disabled={settings.topics.length === 0 || loading}
-                                        className="w-full bg-purple-600 hover:bg-purple-700 py-3 text-lg"
-                                    >
-                                        {loading ? 'Generating Questions...' : 'Start Interview'}
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        </motion.div>
-                    )}
-
-                    {stage === 'interview' && (
-                        <motion.div
-                            key="interview"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="flex-1 flex flex-col"
-                        >
-                            {/* Progress Header */}
-                            <div className="mb-4">
-                                <div className="flex justify-between items-center mb-2">
-                                    <h1 className="text-xl md:text-2xl font-bold text-white">
-                                        Question {currentQuestionIndex + 1} of {questions.length}
-                                    </h1>
-                                    <div className="text-sm text-slate-400">
-                                        {Math.round(((currentQuestionIndex + 1) / questions.length) * 100)}% Complete
-                                    </div>
                                 </div>
-                                <Progress 
-                                    value={((currentQuestionIndex + 1) / questions.length) * 100} 
-                                    className="h-2 bg-slate-800"
-                                />
+
+                                {/* Start Button */}
+                                <Button
+                                    onClick={startInterview}
+                                    disabled={settings.topics.length === 0 || loading}
+                                    className="w-full bg-purple-600 hover:bg-purple-700 py-3 text-lg"
+                                >
+                                    {loading ? (
+                                        <div className="flex items-center">
+                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                            Generating Questions...
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <Play className="w-5 h-5 mr-2" />
+                                            Start Interview
+                                        </>
+                                    )}
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                )}
+
+                {stage === 'interview' && (
+                    <motion.div
+                        key="interview"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex-1 flex flex-col"
+                    >
+                        {/* Progress Header */}
+                        <div className="mb-4">
+                            <div className="flex justify-between items-center mb-2">
+                                <h1 className="text-xl md:text-2xl font-bold text-white">
+                                    Question {currentQuestionIndex + 1} of {questions.length}
+                                </h1>
+                                <div className="text-sm text-slate-400">
+                                    {Math.round(((currentQuestionIndex + 1) / questions.length) * 100)}% Complete
+                                </div>
                             </div>
+                            <Progress 
+                                value={((currentQuestionIndex + 1) / questions.length) * 100} 
+                                className="h-2 bg-slate-800"
+                            />
+                        </div>
 
-                            {/* Main Content - Mobile-First Responsive */}
-                            <div className="flex-1 flex flex-col lg:grid lg:grid-cols-2 gap-4 lg:gap-6 min-h-0">
-                                {/* Question Section */}
-                                <div className="flex flex-col min-h-[200px] lg:min-h-0">
-                                    <Card className="bg-slate-800/50 border-slate-700/50 flex-1 flex flex-col">
-                                        <CardHeader className="pb-3">
-                                            <div className="flex gap-2 flex-wrap mb-2">
-                                                <Badge variant="outline" className={`text-xs ${
-                                                    questions[currentQuestionIndex].difficulty === 'Easy' && 'border-green-500 text-green-400'
-                                                } ${
-                                                    questions[currentQuestionIndex].difficulty === 'Medium' && 'border-yellow-500 text-yellow-400'
-                                                } ${
-                                                    questions[currentQuestionIndex].difficulty === 'Hard' && 'border-red-500 text-red-400'
-                                                }`}>
-                                                    {questions[currentQuestionIndex].difficulty}
-                                                </Badge>
-                                                <Badge variant="outline" className="border-purple-500 text-purple-400 text-xs">
-                                                    {AVAILABLE_TOPICS.find(t => t.id === questions[currentQuestionIndex].topic)?.label}
-                                                </Badge>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent className="flex-1 overflow-hidden pt-0">
-                                            <ScrollArea className="h-full">
-                                                <div className="pr-4">
-                                                    <h2 className="text-base lg:text-lg text-white leading-relaxed whitespace-pre-wrap">
-                                                        {questions[currentQuestionIndex].question}
-                                                    </h2>
-                                                </div>
-                                            </ScrollArea>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-
-                                {/* Answer Section */}
-                                <div className="flex flex-col flex-1 lg:min-h-0">
-                                    <Card className="bg-slate-800/50 border-slate-700/50 flex-1 flex flex-col">
-                                        <CardHeader className="pb-3">
-                                            <CardTitle className="text-white flex items-center text-lg">
+                        {/* Main Content - Mobile-First Responsive */}
+                        <div className="flex-1 flex flex-col lg:grid lg:grid-cols-2 gap-4 lg:gap-6 min-h-0">
+                            {/* Question Section */}
+                            <div className="flex flex-col min-h-[200px] lg:min-h-0">
+                                <Card className="bg-slate-800/50 border-slate-700/50 h-full">
+                                    <CardHeader className="pb-3">
+                                        <div className="flex items-center justify-between">
+                                            <CardTitle className="text-white flex items-center">
                                                 <Brain className="w-5 h-5 mr-2" />
-                                                Your Answer
+                                                Question
                                             </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="flex-1 flex flex-col space-y-3 pt-0">
-                                            <Textarea
-                                                value={currentAnswer}
-                                                onChange={(e) => setCurrentAnswer(e.target.value)}
-                                                placeholder="Type your answer here..."
-                                                className="flex-1 min-h-[150px] lg:min-h-[200px] bg-slate-900/50 border-slate-600 text-white resize-none"
-                                            />
-
-                                            {/* Recording Controls */}
-                                            {settings.enableSTT && (
-                                                <div className="flex items-center gap-2 text-sm">
+                                            <div className="flex items-center gap-2">
+                                                <Badge className={getDifficultyColor(questions[currentQuestionIndex]?.difficulty)}>
+                                                    {questions[currentQuestionIndex]?.difficulty}
+                                                </Badge>
+                                                <Badge className={`${getTopicColor(questions[currentQuestionIndex]?.topic)} text-white`}>
+                                                    {AVAILABLE_TOPICS.find(t => t.id === questions[currentQuestionIndex]?.topic)?.label}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="flex-1">
+                                        <ScrollArea className="h-full">
+                                            <div className="space-y-4">
+                                                <p className="text-slate-200 text-lg leading-relaxed">
+                                                    {questions[currentQuestionIndex]?.question}
+                                                </p>
+                                                
+                                                {/* Show Answer Section */}
+                                                <div className="space-y-3">
                                                     <Button
-                                                        onClick={toggleRecording}
-                                                        variant={isRecording ? "destructive" : "outline"}
+                                                        onClick={() => setShowAnswer(!showAnswer)}
+                                                        variant="outline"
                                                         size="sm"
-                                                        className="flex-shrink-0"
+                                                        className="border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
                                                     >
-                                                        {isRecording ? <MicOff className="w-4 h-4 mr-1" /> : <Mic className="w-4 h-4 mr-1" />}
-                                                        <span className="hidden sm:inline">
-                                                            {isRecording ? 'Stop' : 'Voice'}
-                                                        </span>
-                                                    </Button>
-                                                    <span className="text-slate-400 text-xs">
-                                                        {currentAnswer.length} chars
-                                                    </span>
-                                                </div>
-                                            )}
-
-                                            {/* Action Buttons - Mobile Optimized */}
-                                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                                                <Button
-                                                    onClick={submitAnswer}
-                                                    disabled={loading || !currentAnswer.trim()}
-                                                    className="flex-1 bg-purple-600 hover:bg-purple-700 py-2 sm:py-3"
-                                                >
-                                                    {loading ? 'Evaluating...' : 'Submit Answer'}
-                                                </Button>
-                                                <Button
-                                                    onClick={skipQuestion}
-                                                    variant="outline"
-                                                    className="w-full sm:w-auto sm:px-6 py-2 sm:py-3"
-                                                >
-                                                    <SkipForward className="w-4 h-4 mr-2" />
-                                                    Skip Question
-                                                </Button>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-                            </div>
-
-                            {/* Immediate Feedback Overlay */}
-                            <AnimatePresence>
-                                {showFeedback && questions[currentQuestionIndex].score !== undefined && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 50 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 50 }}
-                                        className="fixed bottom-4 left-4 right-4 z-50"
-                                    >
-                                        <Card className="bg-slate-800 border-purple-500 max-w-lg mx-auto shadow-2xl">
-                                            <CardContent className="p-4 sm:p-6">
-                                                <div className="flex items-center gap-3 sm:gap-4">
-                                                    <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center ${
-                                                        (questions[currentQuestionIndex].score || 0) >= 70 
-                                                            ? 'bg-green-500/20 text-green-400' 
-                                                            : 'bg-yellow-500/20 text-yellow-400'
-                                                    }`}>
-                                                        <span className="text-lg sm:text-xl font-bold">
-                                                            {questions[currentQuestionIndex].score}%
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <p className="text-white font-medium text-base sm:text-lg">Answer Submitted!</p>
-                                                        <p className="text-sm text-slate-400 mt-1">
-                                                            {questions[currentQuestionIndex].feedback?.[0] || 'Good effort!'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </motion.div>
-                    )}
-
-                    {stage === 'results' && (
-                        <motion.div
-                            key="results"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="flex-1 h-full"
-                        >
-                            <div className="h-full overflow-y-auto">
-                                <div className="max-w-5xl mx-auto space-y-6 py-6 min-h-full">
-                                    {/* Results Header */}
-                                    <Card className="bg-slate-800/50 border-slate-700/50">
-                                        <CardHeader className="text-center py-6 sm:py-8">
-                                            <CardTitle className="text-white flex items-center justify-center text-2xl sm:text-3xl mb-4">
-                                                <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-400 mr-3" />
-                                                Interview Complete!
-                                            </CardTitle>
-                                            <div className="text-5xl sm:text-7xl font-bold text-purple-400 my-4 sm:my-6">
-                                                {calculateOverallScore()}%
-                                            </div>
-                                            <p className="text-lg sm:text-xl text-slate-400">Overall Score</p>
-                                            
-                                            {/* Action Buttons */}
-                                            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mt-6 sm:mt-8">
-                                                <Button
-                                                    onClick={() => {
-                                                        // Simple PDF generation fallback
-                                                        const printContent = `
-                                                            Interview Results
-                                                            Overall Score: ${calculateOverallScore()}%
-                                                            
-                                                            ${questions.map((q, i) => `
-                                                                Q${i + 1}: ${q.question}
-                                                                Answer: ${q.userAnswer || 'No answer'}
-                                                                Score: ${q.score || 0}%
-                                                                ${q.feedback ? `Feedback: ${q.feedback.join(', ')}` : ''}
-                                                            `).join('\n')}
-                                                        `;
-                                                        
-                                                        const blob = new Blob([printContent], { type: 'text/plain' });
-                                                        const url = URL.createObjectURL(blob);
-                                                        const a = document.createElement('a');
-                                                        a.href = url;
-                                                        a.download = `interview-results-${new Date().toISOString().split('T')[0]}.txt`;
-                                                        a.click();
-                                                        URL.revokeObjectURL(url);
-                                                        
-                                                        toast({
-                                                            title: "Results Downloaded",
-                                                            description: "Your interview results have been downloaded as a text file.",
-                                                        });
-                                                    }}
-                                                    disabled={isGeneratingPDF}
-                                                    className="bg-purple-600 hover:bg-purple-700 px-6 sm:px-8 py-3"
-                                                >
-                                                    <Download className="w-4 h-4 mr-2" />
-                                                    Download Results
-                                                </Button>
-                                            </div>
-                                        </CardHeader>
-                                    </Card>
-
-                                    {/* Summary Statistics */}
-                                    <Card className="bg-slate-800/50 border-slate-700/50">
-                                        <CardHeader>
-                                            <CardTitle className="text-white flex items-center text-lg sm:text-xl">
-                                                <Target className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                                                Performance Summary
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="grid grid-cols-3 gap-3 sm:gap-6">
-                                                <div className="text-center p-3 sm:p-6 bg-slate-900/50 rounded-lg">
-                                                    <div className="text-xl sm:text-3xl font-bold text-green-400">
-                                                        {questions.filter(q => q.score && q.score >= 70).length}
-                                                    </div>
-                                                    <p className="text-slate-400 mt-1 sm:mt-2 text-xs sm:text-sm">Excellent</p>
-                                                </div>
-                                                <div className="text-center p-3 sm:p-6 bg-slate-900/50 rounded-lg">
-                                                    <div className="text-xl sm:text-3xl font-bold text-yellow-400">
-                                                        {questions.filter(q => q.score && q.score >= 50 && q.score < 70).length}
-                                                    </div>
-                                                    <p className="text-slate-400 mt-1 sm:mt-2 text-xs sm:text-sm">Good</p>
-                                                </div>
-                                                <div className="text-center p-3 sm:p-6 bg-slate-900/50 rounded-lg">
-                                                    <div className="text-xl sm:text-3xl font-bold text-red-400">
-                                                        {questions.filter(q => q.score && q.score < 50).length}
-                                                    </div>
-                                                    <p className="text-slate-400 mt-1 sm:mt-2 text-xs sm:text-sm">Needs Work</p>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-
-                                    {/* Detailed Results */}
-                                    <Card className="bg-slate-800/50 border-slate-700/50">
-                                        <CardHeader>
-                                            <CardTitle className="text-white flex items-center text-lg sm:text-xl">
-                                                <FileText className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                                                Question Details
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="space-y-4 sm:space-y-6">
-                                                {questions.map((question, index) => (
-                                                    <div key={question.id} className="p-4 sm:p-6 rounded-lg bg-slate-900/50 space-y-3 sm:space-y-4">
-                                                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-                                                            <div className="flex-1">
-                                                                <h3 className="font-medium text-white mb-2 sm:mb-3 text-base sm:text-lg leading-relaxed">
-                                                                    Q{index + 1}: {question.question}
-                                                                </h3>
-                                                                <div className="flex gap-2 mb-3 flex-wrap">
-                                                                    <Badge variant="outline" className="text-xs">
-                                                                        {question.topic}
-                                                                    </Badge>
-                                                                    <Badge variant="outline" className="text-xs">
-                                                                        {question.difficulty}
-                                                                    </Badge>
-                                                                </div>
-                                                            </div>
-                                                            {question.score !== undefined && (
-                                                                <div className={`px-3 sm:px-4 py-1 sm:py-2 rounded-full text-sm font-medium flex-shrink-0 ${
-                                                                    question.score >= 70 
-                                                                        ? 'bg-green-500/20 text-green-400' 
-                                                                        : question.score >= 50
-                                                                        ? 'bg-yellow-500/20 text-yellow-400'
-                                                                        : 'bg-red-500/20 text-red-400'
-                                                                }`}>
-                                                                    {question.score}%
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        
-                                                        {question.userAnswer && (
-                                                            <div>
-                                                                <p className="text-sm text-slate-400 mb-2">Your Answer:</p>
-                                                                <p className="text-sm text-slate-200 bg-slate-800/50 p-3 sm:p-4 rounded leading-relaxed">
-                                                                    {question.userAnswer}
-                                                                </p>
-                                                            </div>
+                                                        {showAnswer ? (
+                                                            <>
+                                                                <EyeOff className="w-4 h-4 mr-2" />
+                                                                Hide Answer
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Eye className="w-4 h-4 mr-2" />
+                                                                Show Answer
+                                                            </>
                                                         )}
-                                                        
-                                                        {question.feedback && question.feedback.length > 0 && (
-                                                            <div>
-                                                                <p className="text-sm text-slate-400 mb-2">Feedback:</p>
-                                                                <ul className="list-disc list-inside space-y-1">
-                                                                    {question.feedback.map((fb, fbIndex) => (
-                                                                        <li key={fbIndex} className="text-sm text-slate-300 leading-relaxed">
-                                                                            {fb}
+                                                    </Button>
+
+                                                    <AnimatePresence>
+                                                        {showAnswer && (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, height: 0 }}
+                                                                animate={{ opacity: 1, height: "auto" }}
+                                                                exit={{ opacity: 0, height: 0 }}
+                                                                transition={{ duration: 0.3 }}
+                                                                className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4"
+                                                            >
+                                                                <div className="flex items-center mb-3">
+                                                                    <Lightbulb className="w-5 h-5 text-blue-400 mr-2" />
+                                                                    <h4 className="text-blue-400 font-semibold">Key Points to Cover:</h4>
+                                                                </div>
+                                                                <ul className="space-y-2 text-slate-300">
+                                                                    {questions[currentQuestionIndex]?.expectedPoints.map((point, index) => (
+                                                                        <li key={index} className="flex items-start">
+                                                                            <CheckCircle className="w-4 h-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                                                                            <span className="text-sm">{point}</span>
                                                                         </li>
                                                                     ))}
                                                                 </ul>
-                                                            </div>
+                                                            </motion.div>
                                                         )}
+                                                    </AnimatePresence>
+                                                </div>
+                                            </div>
+                                        </ScrollArea>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            {/* Answer Section */}
+                            <div className="flex flex-col min-h-[300px] lg:min-h-0">
+                                <Card className="bg-slate-800/50 border-slate-700/50 h-full">
+                                    <CardHeader className="pb-3">
+                                        <CardTitle className="text-white flex items-center">
+                                            <FileText className="w-5 h-5 mr-2" />
+                                            Your Answer
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="flex-1 flex flex-col space-y-4">
+                                        {/* Answer Input */}
+                                        <div className="flex-1">
+                                            <Textarea
+                                                placeholder="Type your answer here... You can also use voice input if enabled."
+                                                value={currentAnswer}
+                                                onChange={(e) => setCurrentAnswer(e.target.value)}
+                                                className="bg-slate-900/50 border-slate-600 text-white h-full min-h-[150px] resize-none"
+                                            />
+                                        </div>
+
+                                        {/* Voice Input and Character Count */}
+                                        {settings.enableSTT && (
+                                            <div className="flex items-center justify-between">
+                                                <Button
+                                                    onClick={toggleRecording}
+                                                    variant={isRecording ? "destructive" : "outline"}
+                                                    size="sm"
+                                                    className="flex-shrink-0"
+                                                >
+                                                    {isRecording ? <MicOff className="w-4 h-4 mr-1" /> : <Mic className="w-4 h-4 mr-1" />}
+                                                    <span className="hidden sm:inline">
+                                                        {isRecording ? 'Stop' : 'Voice'}
+                                                    </span>
+                                                </Button>
+                                                <span className="text-slate-400 text-xs">
+                                                    {currentAnswer.length} chars
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {/* Action Buttons - Mobile Optimized */}
+                                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                                            <Button
+                                                onClick={submitAnswer}
+                                                disabled={loading || !currentAnswer.trim()}
+                                                className="flex-1 bg-purple-600 hover:bg-purple-700 py-2 sm:py-3"
+                                            >
+                                                {loading ? (
+                                                    <div className="flex items-center">
+                                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                                        Evaluating...
                                                     </div>
-                                                ))}
+                                                ) : (
+                                                    <>
+                                                        <CheckCircle className="w-4 h-4 mr-2" />
+                                                        Submit Answer
+                                                    </>
+                                                )}
+                                            </Button>
+                                            <Button
+                                                onClick={skipQuestion}
+                                                variant="outline"
+                                                className="flex-1 sm:flex-none border-slate-600 text-slate-300 hover:text-white py-2 sm:py-3"
+                                            >
+                                                <SkipForward className="w-4 h-4 mr-2" />
+                                                Skip
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+
+                        {/* Feedback Overlay */}
+                        <AnimatePresence>
+                            {showFeedback && questions[currentQuestionIndex]?.feedback && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 50 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 50 }}
+                                    className="fixed bottom-4 left-4 right-4 z-50"
+                                >
+                                    <Card className="bg-slate-900/95 border-slate-700 backdrop-blur-sm">
+                                        <CardContent className="p-4">
+                                            <div className="flex items-start space-x-3">
+                                                <div className="flex-shrink-0">
+                                                    {questions[currentQuestionIndex]?.score! >= 70 ? (
+                                                        <CheckCircle className="w-6 h-6 text-green-400" />
+                                                    ) : questions[currentQuestionIndex]?.score! >= 50 ? (
+                                                        <AlertCircle className="w-6 h-6 text-yellow-400" />
+                                                    ) : (
+                                                        <X className="w-6 h-6 text-red-400" />
+                                                    )}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h4 className="text-white font-semibold mb-2">
+                                                        Score: {questions[currentQuestionIndex]?.score}/100
+                                                    </h4>
+                                                    <ul className="text-slate-300 text-sm space-y-1">
+                                                        {questions[currentQuestionIndex]?.feedback?.map((item, index) => (
+                                                            <li key={index}>• {item}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
                                             </div>
                                         </CardContent>
                                     </Card>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
+                )}
 
-                                    {/* Restart Button */}
-                                    <Card className="bg-slate-800/50 border-slate-700/50">
-                                        <CardContent className="p-6 sm:p-8 text-center">
+                {stage === 'results' && (
+                    <motion.div
+                        key="results"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex-1"
+                    >
+                        <div className="space-y-6">
+                            {/* Results Header */}
+                            <Card className="bg-slate-800/50 border-slate-700/50">
+                                <CardHeader>
+                                    <CardTitle className="text-white flex items-center justify-center text-2xl">
+                                        <Trophy className="w-6 h-6 mr-2 text-yellow-400" />
+                                        Interview Complete!
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-center space-y-4">
+                                        <div className="text-4xl font-bold text-purple-400">
+                                            {calculateOverallScore()}%
+                                        </div>
+                                        <p className="text-slate-300">Overall Score</p>
+                                        
+                                        {/* Score Breakdown */}
+                                        <div className="grid grid-cols-3 gap-4 mt-6">
+                                            <div className="text-center p-3 sm:p-6 bg-slate-900/50 rounded-lg">
+                                                <div className="text-xl sm:text-3xl font-bold text-green-400">
+                                                    {questions.filter(q => q.score && q.score >= 70).length}
+                                                </div>
+                                                <p className="text-slate-400 mt-1 sm:mt-2 text-xs sm:text-sm">Excellent</p>
+                                            </div>
+                                            <div className="text-center p-3 sm:p-6 bg-slate-900/50 rounded-lg">
+                                                <div className="text-xl sm:text-3xl font-bold text-yellow-400">
+                                                    {questions.filter(q => q.score && q.score >= 50 && q.score < 70).length}
+                                                </div>
+                                                <p className="text-slate-400 mt-1 sm:mt-2 text-xs sm:text-sm">Good</p>
+                                            </div>
+                                            <div className="text-center p-3 sm:p-6 bg-slate-900/50 rounded-lg">
+                                                <div className="text-xl sm:text-3xl font-bold text-red-400">
+                                                    {questions.filter(q => q.score && q.score < 50).length}
+                                                </div>
+                                                <p className="text-slate-400 mt-1 sm:mt-2 text-xs sm:text-sm">Needs Work</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Action Buttons */}
+                                        <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                                            <Button
+                                                onClick={generatePDF}
+                                                disabled={isGeneratingPDF}
+                                                className="flex-1 bg-green-600 hover:bg-green-700"
+                                            >
+                                                {isGeneratingPDF ? (
+                                                    <div className="flex items-center">
+                                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                                        Generating PDF...
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <Download className="w-4 h-4 mr-2" />
+                                                        Download Results
+                                                    </>
+                                                )}
+                                            </Button>
                                             <Button
                                                 onClick={() => {
                                                     setStage('setup');
-                                                    setQuestions([]);
                                                     setCurrentQuestionIndex(0);
+                                                    setQuestions([]);
                                                     setCurrentAnswer("");
                                                     setShowFeedback(false);
+                                                    setShowAnswer(false);
                                                 }}
-                                                className="bg-purple-600 hover:bg-purple-700 px-6 sm:px-8 py-3 text-base sm:text-lg"
+                                                variant="outline"
+                                                className="flex-1 border-slate-600 text-slate-300 hover:text-white"
                                             >
-                                                Start New Interview
+                                                <Play className="w-4 h-4 mr-2" />
+                                                New Interview
                                             </Button>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Detailed Results */}
+                            <Card className="bg-slate-800/50 border-slate-700/50">
+                                <CardHeader>
+                                    <CardTitle className="text-white flex items-center">
+                                        <BarChart3 className="w-5 h-5 mr-2" />
+                                        Question Breakdown
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <ScrollArea className="h-80">
+                                        <div className="space-y-4">
+                                            {questions.map((question, index) => (
+                                                <div key={question.id} className="p-4 bg-slate-900/50 rounded-lg">
+                                                    <div className="flex items-start justify-between mb-3">
+                                                        <div className="flex-1">
+                                                            <h4 className="text-white font-medium mb-2">
+                                                                Question {index + 1}
+                                                            </h4>
+                                                            <p className="text-slate-300 text-sm mb-3">
+                                                                {question.question}
+                                                            </p>
+                                                            <div className="flex items-center gap-2 mb-3">
+                                                                <Badge className={getDifficultyColor(question.difficulty)}>
+                                                                    {question.difficulty}
+                                                                </Badge>
+                                                                <Badge className={`${getTopicColor(question.topic)} text-white`}>
+                                                                    {AVAILABLE_TOPICS.find(t => t.id === question.topic)?.label}
+                                                                </Badge>
+                                                            </div>
+                                                        </div>
+                                                        {question.score !== undefined && (
+                                                            <div className="text-right">
+                                                                <div className={`text-2xl font-bold ${
+                                                                    question.score >= 70 ? 'text-green-400' :
+                                                                    question.score >= 50 ? 'text-yellow-400' : 'text-red-400'
+                                                                }`}>
+                                                                    {question.score}
+                                                                </div>
+                                                                <div className="text-xs text-slate-400">out of 100</div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Expected Points */}
+                                                    <div className="mb-3">
+                                                        <div className="flex items-center mb-2">
+                                                            <Lightbulb className="w-4 h-4 text-blue-400 mr-2" />
+                                                            <span className="text-blue-400 text-sm font-medium">Expected Points:</span>
+                                                        </div>
+                                                        <ul className="text-slate-300 text-sm space-y-1 ml-6">
+                                                            {question.expectedPoints.map((point, pointIndex) => (
+                                                                <li key={pointIndex} className="flex items-start">
+                                                                    <CheckCircle className="w-3 h-3 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+                                                                    <span>{point}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+
+                                                    {/* User Answer */}
+                                                    {question.userAnswer && (
+                                                        <div className="mb-3">
+                                                            <div className="flex items-center mb-2">
+                                                                <FileText className="w-4 h-4 text-purple-400 mr-2" />
+                                                                <span className="text-purple-400 text-sm font-medium">Your Answer:</span>
+                                                            </div>
+                                                            <p className="text-slate-300 text-sm bg-slate-800/50 p-3 rounded border-l-4 border-purple-400/50">
+                                                                {question.userAnswer}
+                                                            </p>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Feedback */}
+                                                    {question.feedback && question.feedback.length > 0 && (
+                                                        <div>
+                                                            <div className="flex items-center mb-2">
+                                                                <Target className="w-4 h-4 text-yellow-400 mr-2" />
+                                                                <span className="text-yellow-400 text-sm font-medium">Feedback:</span>
+                                                            </div>
+                                                            <ul className="text-slate-300 text-sm space-y-1 ml-6">
+                                                                {question.feedback.map((feedback, feedbackIndex) => (
+                                                                    <li key={feedbackIndex} className="flex items-start">
+                                                                        <AlertCircle className="w-3 h-3 text-yellow-400 mr-2 mt-0.5 flex-shrink-0" />
+                                                                        <span>{feedback}</span>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+                                                    )}
+
+                                                    {!question.userAnswer && (
+                                                        <div className="text-slate-500 text-sm italic">
+                                                            Question was skipped
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </ScrollArea>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
-};
+}

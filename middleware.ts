@@ -1,4 +1,4 @@
-// middleware.ts - Global authentication middleware
+// middleware.ts - Enhanced with subscription checks
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
@@ -7,6 +7,7 @@ import { getToken } from 'next-auth/jwt';
 const publicRoutes = [
     '/',
     '/login',
+    '/pricing',
     '/api/auth',
     '/api/auth/signin',
     '/api/auth/callback',
@@ -14,12 +15,18 @@ const publicRoutes = [
     '/api/auth/providers',
     '/_next',
     '/favicon.ico',
-    '/api/cron', // Allow cron jobs
+    '/api/cron',
 ];
 
 // Define routes that require authentication but not onboarding
 const authOnlyRoutes = [
     '/onboard',
+];
+
+// Define routes that require Gold membership
+const goldOnlyRoutes = [
+    '/interview',
+    '/interview-prep'
 ];
 
 export async function middleware(request: NextRequest) {
@@ -48,22 +55,24 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
-    // For all other authenticated routes, check if user is onboarded
-    // We'll handle this check in the individual page components
-    // to avoid making database calls in middleware
+    // Check for Gold membership required routes
+    if (goldOnlyRoutes.some(route => pathname.startsWith(route))) {
+        // Add subscription tier to headers so the page component can access it
+        const requestHeaders = new Headers(request.headers);
+        requestHeaders.set('x-user-email', token.email || '');
+        
+        return NextResponse.next({
+            request: {
+                headers: requestHeaders
+            }
+        });
+    }
 
     return NextResponse.next();
 }
 
 export const config = {
     matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - api/auth (NextAuth.js)
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         */
         '/((?!api/auth|_next/static|_next/image|favicon.ico).*)',
     ],
 };
