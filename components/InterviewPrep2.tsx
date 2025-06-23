@@ -30,7 +30,7 @@ import {
 import { useState } from "react";
 
 interface InterviewPrepProps {
-    // onExit prop is optional and may not be used
+    onExit?: () => void;
 }
 
 interface Question {
@@ -58,7 +58,7 @@ const AVAILABLE_TOPICS = [
     { id: 'networks', label: 'Computer Networks', color: 'bg-orange-500' }
 ];
 
-export default function InterviewPrep(_props: InterviewPrepProps) {
+export default function InterviewPrep(_: InterviewPrepProps) {
     const [stage, setStage] = useState<'setup' | 'interview' | 'results'>('setup');
     const [settings, setSettings] = useState<InterviewSettings>({
         numberOfQuestions: 5,
