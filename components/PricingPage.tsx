@@ -381,7 +381,7 @@ export default function PricingPage({ currentTier = 'free', userEmail }: Pricing
                                         {/* Coupon Input for paid tiers */}
                                         {tier.id !== 'free' && (
                                             <CouponInput
-                                                tier={tier.id}
+                                                tier={tier.id as "silver" | "gold"}
                                                 billingCycle={billingCycle}
                                                 onCouponApplied={(data) => handleCouponApplied(tier.id, data)}
                                                 onCouponRemoved={() => handleCouponRemoved(tier.id)}
@@ -459,7 +459,7 @@ export default function PricingPage({ currentTier = 'free', userEmail }: Pricing
                                                 </Button>
                                             ) : (
                                                 <RazorpayCheckout
-                                                    tier={tier.id}
+                                                    tier={tier.id as "silver" | "gold"}
                                                     billingCycle={billingCycle}
                                                     amount={displayPrice.amount * 100} // Convert to paise
                                                     onSuccess={handlePaymentSuccess}

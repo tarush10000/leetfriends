@@ -1,20 +1,21 @@
+// components/RazorpayCheckout.tsx - Fixed to follow Razorpay documentation
 "use client";
 
-import { Button } from '@/components/ui/button';
-import { AlertCircle, Loader2, Tag } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
+import { Button } from "@/components/ui/button";
+import { AlertCircle, Tag } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface RazorpayCheckoutProps {
-    tier: string;
-    billingCycle: string;
-    amount: number;
-    couponCode?: string; // Add coupon support
-    originalAmount?: number; // Original amount before discount
+    tier: 'silver' | 'gold';
+    billingCycle: 'monthly' | 'yearly';
+    amount: number; // Amount in rupees
+    couponCode?: string;
+    originalAmount?: number;
     onSuccess: (data: any) => void;
     onError: (error: any) => void;
     disabled?: boolean;
-    children: React.ReactNode;
+    children: React.ReactNode | ((props: { loading: boolean; isFree: boolean }) => React.ReactNode);
 }
 
 declare global {
@@ -49,13 +50,13 @@ export default function RazorpayCheckout({
             const script = document.createElement('script');
             script.src = 'https://checkout.razorpay.com/v1/checkout.js';
             script.async = true;
-            
+
             script.onload = () => setScriptLoaded(true);
             script.onerror = () => {
                 setError('Failed to load payment gateway');
                 toast.error('Failed to load payment gateway');
             };
-            
+
             document.body.appendChild(script);
         };
 
@@ -67,12 +68,12 @@ export default function RazorpayCheckout({
             setLoading(true);
             setError(null);
 
-            console.log('🔄 Starting payment process...', { 
-                tier, 
-                billingCycle, 
-                amount, 
+            console.log('🔄 Starting payment process...', {
+                tier,
+                billingCycle,
+                amount,
                 couponCode,
-                originalAmount 
+                originalAmount
             });
 
             if (!scriptLoaded) {
@@ -82,7 +83,7 @@ export default function RazorpayCheckout({
             // If amount is 0 (100% off coupon), handle as free upgrade
             if (amount === 0 && couponCode) {
                 console.log('🎁 Processing 100% off coupon:', couponCode);
-                
+
                 try {
                     const couponResponse = await fetch('/api/coupons/apply', {
                         method: 'POST',
@@ -95,7 +96,7 @@ export default function RazorpayCheckout({
                     });
 
                     const couponData = await couponResponse.json();
-                    
+
                     if (couponResponse.ok && couponData.freeUpgrade) {
                         onSuccess({
                             success: true,
@@ -115,35 +116,40 @@ export default function RazorpayCheckout({
                 }
             }
 
-            // For paid subscriptions, create subscription with Razorpay
-            const subscriptionPayload = {
+            // Step 1: Create Order (according to Razorpay docs)
+            console.log('📝 Creating order...');
+
+            const orderPayload = {
+                amount, // Amount should be in rupees here, API will convert to paise
+                currency: 'INR',
                 tier,
                 billingCycle,
-                ...(couponCode && { couponCode }), // Include coupon if present
-                ...(originalAmount && { originalAmount }), // Include original amount if present
-                finalAmount: amount // The final amount after discount
+                ...(couponCode && { couponCode })
             };
 
-            console.log('🚀 Creating subscription with payload:', subscriptionPayload);
+            console.log('Order payload being sent:', {
+                ...orderPayload,
+                amountNote: `₹${amount} (will be converted to ${amount * 100} paise by API)`
+            });
 
-            const response = await fetch('/api/payments/create-subscription', {
+            const orderResponse = await fetch('/api/payments/create-order', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(subscriptionPayload),
+                body: JSON.stringify(orderPayload),
             });
 
-            const data = await response.json();
+            const orderData = await orderResponse.json();
 
-            if (!response.ok) {
-                console.error('❌ Subscription creation failed:', data);
-                throw new Error(data.error || data.message || 'Failed to create subscription');
+            if (!orderResponse.ok) {
+                console.error('❌ Order creation failed:', orderData);
+                throw new Error(orderData.error || orderData.message || 'Failed to create order');
             }
 
-            console.log('✅ Subscription created successfully:', data);
+            console.log('✅ Order created successfully:', orderData.order);
 
-            // Prepare description with coupon info
+            // Step 2: Prepare Checkout Options (according to Razorpay docs)
             let description = `${tier.charAt(0).toUpperCase() + tier.slice(1)} Plan - ${billingCycle}`;
             if (couponCode && originalAmount && originalAmount > amount) {
                 const discountAmount = originalAmount - amount;
@@ -151,28 +157,30 @@ export default function RazorpayCheckout({
                 description += ` (${discountPercentage}% off with ${couponCode})`;
             }
 
-            // Configure Razorpay options
             const options = {
                 key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-                subscription_id: data.subscriptionId,
+                amount: orderData.order.amount, // Amount in paise from order
+                currency: orderData.order.currency,
                 name: 'LeetFriends',
                 description,
                 image: '/logo.png',
-                currency: data.currency || 'INR',
+                order_id: orderData.order.id, // Order ID from step 1
                 handler: async function (response: any) {
                     try {
                         setLoading(true);
                         console.log('💳 Payment completed, verifying...', response);
-                        
-                        // Verify payment with coupon information
+
+                        // Step 3: Verify Payment (according to Razorpay docs)
                         const verifyPayload = {
                             razorpay_payment_id: response.razorpay_payment_id,
-                            razorpay_subscription_id: response.razorpay_subscription_id,
+                            razorpay_order_id: response.razorpay_order_id,
                             razorpay_signature: response.razorpay_signature,
-                            ...(couponCode && { couponCode }), // Include coupon in verification
                             tier,
-                            billingCycle
+                            billingCycle,
+                            ...(couponCode && { couponCode })
                         };
+
+                        console.log('🔐 Verifying payment signature...');
 
                         const verifyResponse = await fetch('/api/payments/verify-payment', {
                             method: 'POST',
@@ -186,7 +194,7 @@ export default function RazorpayCheckout({
                         console.log('🔐 Verification result:', verifyData);
 
                         if (verifyResponse.ok) {
-                            // Add coupon information to success callback
+                            // Success! Add additional info to success callback
                             const successData = {
                                 ...verifyData,
                                 couponCode,
@@ -194,54 +202,49 @@ export default function RazorpayCheckout({
                                 finalAmount: amount,
                                 discountApplied: originalAmount && originalAmount > amount ? originalAmount - amount : 0
                             };
-                            
+
                             onSuccess(successData);
-                            
+
                             // Show success message with coupon info
                             if (couponCode && originalAmount && originalAmount > amount) {
                                 const savings = originalAmount - amount;
-                                toast.success(`🎉 Payment successful! You saved ₹${(savings / 100).toFixed(2)} with ${couponCode}!`);
+                                toast.success(`🎉 Payment successful! You saved ₹${savings.toFixed(2)} with ${couponCode}!`);
                             } else {
                                 toast.success('🎉 Payment successful! Your subscription is now active.');
                             }
                         } else {
                             throw new Error(verifyData.error || 'Payment verification failed');
                         }
-                    } catch (error: any) {
-                        console.error('❌ Payment verification error:', error);
-                        onError(error);
-                        toast.error('❌ Payment verification failed: ' + error.message);
+                    } catch (verifyError: any) {
+                        console.error('💥 Payment verification failed:', verifyError);
+                        setError(verifyError.message);
+                        onError(verifyError);
+                        toast.error('❌ Payment verification failed: ' + verifyError.message);
                     } finally {
                         setLoading(false);
                     }
                 },
                 prefill: {
-                    name: '',
-                    email: '',
-                    contact: ''
+                    name: '', // Will be auto-filled by Razorpay if available
+                    email: '', // Will be auto-filled by Razorpay if available
+                    contact: '' // Will be auto-filled by Razorpay if available
                 },
                 notes: {
                     tier,
                     billing_cycle: billingCycle,
-                    ...(couponCode && { coupon_code: couponCode }),
-                    ...(originalAmount && { original_amount: originalAmount }),
-                    final_amount: amount
+                    platform: 'leetfriends',
+                    ...(couponCode && { coupon_code: couponCode })
                 },
                 theme: {
-                    color: '#8B5CF6'
+                    color: '#7c3aed' // Purple theme matching your app
                 },
                 modal: {
-                    ondismiss: function() {
-                        setLoading(false);
-                        toast.info('Payment cancelled');
-                    },
                     confirm_close: true,
-                    escape: true,
-                    animation: true
+                    ondismiss: function () {
+                        setLoading(false);
+                        console.log('💭 Payment modal closed by user');
+                    }
                 },
-                recurring: 1,
-                subscription_card_change: 1,
-                remember_customer: false,
                 retry: {
                     enabled: true,
                     max_count: 4
@@ -255,7 +258,7 @@ export default function RazorpayCheckout({
             });
 
             const rzp = new window.Razorpay(options);
-            
+
             rzp.on('payment.failed', function (response: any) {
                 setLoading(false);
                 const errorMessage = response.error?.description || 'Payment failed';
@@ -314,61 +317,41 @@ export default function RazorpayCheckout({
                     <div className="inline-flex items-center px-2 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
                         <Tag className="w-3 h-3 mr-1" />
                         <span className="line-through text-slate-400 mr-2">
-                            ₹{(originalAmount! / 100).toFixed(2)}
+                            ₹{originalAmount!.toFixed(2)}
                         </span>
                         <span className="font-semibold">
-                            ₹{(amount / 100).toFixed(2)}
+                            ₹{amount.toFixed(2)}
                         </span>
                     </div>
                 </div>
             )}
 
-            <Button
-                onClick={handlePayment}
-                disabled={disabled || loading || !scriptLoaded}
-                className={`w-full ${
-                    isFree 
-                        ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800' 
-                        : hasDiscount 
-                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 border border-green-500/30' 
-                        : ''
-                }`}
-            >
-                {loading ? (
-                    <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        {isFree ? 'Activating...' : 'Processing...'}
-                    </>
-                ) : !scriptLoaded ? (
-                    <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Loading...
-                    </>
-                ) : (
-                    <>
-                        {children}
-                        {isFree && (
-                            <span className="ml-2 text-xs bg-green-800/50 px-2 py-0.5 rounded-full">
-                                FREE
-                            </span>
+            {/* Payment Button */}
+            <div onClick={handlePayment}>
+                {typeof children === 'function'
+                    ? (children as (props: { loading: boolean; isFree: boolean }) => React.ReactNode)({ loading: loading || disabled, isFree })
+                    : <Button
+                        disabled={loading || disabled || !scriptLoaded}
+                        className="w-full"
+                    >
+                        {loading ? (
+                            <div className="flex items-center">
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                {isFree ? 'Activating...' : 'Processing...'}
+                            </div>
+                        ) : (
+                            <>
+                                {isFree ? 'Activate Free Subscription' :
+                                    `Pay ₹${amount.toFixed(2)}`}
+                            </>
                         )}
-                        {hasDiscount && !isFree && couponCode && (
-                            <span className="ml-2 text-xs bg-green-800/50 px-2 py-0.5 rounded-full">
-                                {couponCode}
-                            </span>
-                        )}
-                    </>
-                )}
-            </Button>
+                    </Button>
+                }
+            </div>
 
-            {/* Show savings info */}
-            {hasDiscount && (
-                <div className="text-center text-xs text-green-400">
-                    {isFree ? (
-                        `You save ₹${(originalAmount! / 100).toFixed(2)} with ${couponCode}!`
-                    ) : (
-                        `You save ₹${((originalAmount! - amount) / 100).toFixed(2)} with ${couponCode}!`
-                    )}
+            {!scriptLoaded && (
+                <div className="text-center text-xs text-slate-400">
+                    Loading payment gateway...
                 </div>
             )}
         </div>

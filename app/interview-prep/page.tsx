@@ -1,5 +1,5 @@
 // app/interview-prep/page.tsx - Protected with Gold membership check
-import InterviewPrep2 from "@/components/InterviewPrep2";
+import InterviewPrep from "@/components/InterviewPrep";
 import SubscriptionGuard from "@/components/SubscriptionGuard";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
@@ -49,7 +49,7 @@ export default async function InterviewPrepPage() {
                             Practice with AI-generated questions and get real-time feedback
                         </p>
                     </div>
-                    <InterviewPrep2 />
+                    <InterviewPrep userEmail={user.email} />
                 </div>
             </SubscriptionGuard>
         </div>
