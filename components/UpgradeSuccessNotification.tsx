@@ -1,11 +1,11 @@
 // components/UpgradeSuccessNotification.tsx
 "use client";
 
-import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Crown, X, Sparkles, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { AnimatePresence, motion } from 'framer-motion';
+import { CheckCircle, Crown, Sparkles, Star, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface UpgradeSuccessNotificationProps {
     show: boolean;

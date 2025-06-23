@@ -1,11 +1,11 @@
 // app/interview-prep/page.tsx - Protected with Gold membership check
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
+import InterviewPrep2 from "@/components/InterviewPrep2";
+import SubscriptionGuard from "@/components/SubscriptionGuard";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import { canUserAccessFeature } from "@/lib/subscription";
-import InterviewPrep2 from "@/components/InterviewPrep2";
-import SubscriptionGuard from "@/components/SubscriptionGuard";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 
 export default async function InterviewPrepPage() {
     const session = await getServerSession(authOptions);

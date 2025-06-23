@@ -1,33 +1,24 @@
 "use client";
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion } from "framer-motion";
 import {
-    CheckCircle,
-    Circle,
-    Calendar,
-    Clock,
-    Target,
     BookOpen,
-    ExternalLink,
-    Play,
-    Pause,
-    RotateCcw,
-    TrendingUp,
-    Award,
-    Flame,
-    Route,
-    ChevronRight,
-    ChevronLeft,
-    Star,
     Brain,
-    Code,
-    Timer,
+    Calendar,
+    CheckCircle,
     CheckSquare,
-    Square
+    Circle,
+    Clock,
+    Code,
+    ExternalLink,
+    Route,
+    Star,
+    Target,
+    Timer
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface LeetCodeProblem {
     title: string;

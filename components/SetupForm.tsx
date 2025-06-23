@@ -1,24 +1,24 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-    Users,
-    Plus,
-    Lock,
+    AlertCircle,
+    ArrowLeft,
+    CheckCircle,
     Eye,
     EyeOff,
-    UserCheck,
-    ArrowLeft,
+    Lock,
+    Plus,
     Settings,
-    AlertCircle,
-    CheckCircle
+    UserCheck,
+    Users
 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export default function SetupForm() {
     const router = useRouter();

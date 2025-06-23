@@ -1,12 +1,11 @@
 // components/AudioInterviewPage.tsx
 "use client";
 
-import React from 'react';
+import InterviewPrep2 from "@/components/InterviewPrep2";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Home } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { User } from "next-auth";
-import InterviewPrep2 from "@/components/InterviewPrep2";
+import { useRouter } from "next/navigation";
 
 interface UserProfile {
     handle: string;

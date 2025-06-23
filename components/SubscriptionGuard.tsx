@@ -1,22 +1,22 @@
 // components/SubscriptionGuard.tsx
 "use client";
 
-import React from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+    ArrowLeft,
+    Brain,
+    CheckCircle,
     Crown,
     Lock,
-    ArrowLeft,
     Sparkles,
-    CheckCircle,
-    Brain,
     Target,
-    Zap,
-    Users
+    Users,
+    Zap
 } from "lucide-react";
+import { useRouter } from 'next/navigation';
+import React from 'react';
 
 interface SubscriptionGuardProps {
     userTier: 'free' | 'silver' | 'gold';

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Crown, Loader2, AlertCircle, CheckCircle, Tag } from 'lucide-react';
+import { AlertCircle, Loader2, Tag } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 interface RazorpayCheckoutProps {

@@ -1,44 +1,38 @@
 "use client";
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-    Brain,
-    TrendingUp,
-    Target,
+    Activity,
     AlertTriangle,
-    CheckCircle,
-    Clock,
-    RefreshCw,
-    Lightbulb,
-    BookOpen,
-    BarChart3,
-    Zap,
-    Trophy,
-    Flame,
     ArrowRight,
+    BarChart3,
+    BookOpen,
+    Brain,
+    Calendar,
+    CheckCircle,
+    ChevronDown,
     ChevronRight,
-    Users,
+    Circle,
+    Clock,
     Code,
     Cpu,
-    Calendar,
-    Sparkles,
-    Map,
-    Play,
-    ChevronDown,
-    ExternalLink,
-    TrendingDown,
-    Activity,
-    Award,
+    Info,
+    Lightbulb,
+    RefreshCw,
     Route,
-    Circle,
-    Timer,
-    CheckSquare,
+    Sparkles,
     Star,
-    Info
+    Target,
+    Timer,
+    TrendingDown,
+    TrendingUp,
+    Trophy,
+    Users,
+    Zap
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import LearningPathComponent from './LearningPath';
 
 interface Recommendation {

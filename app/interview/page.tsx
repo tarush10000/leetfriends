@@ -1,11 +1,11 @@
 // app/interview/page.tsx - Protected with Gold membership check
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
+import AudioInterviewPage from "@/components/AudioInterviewPage";
+import SubscriptionGuard from "@/components/SubscriptionGuard";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import { canUserAccessFeature } from "@/lib/subscription";
-import AudioInterviewPage from "@/components/AudioInterviewPage";
-import SubscriptionGuard from "@/components/SubscriptionGuard";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 
 export default async function InterviewPage() {
     const session = await getServerSession(authOptions);

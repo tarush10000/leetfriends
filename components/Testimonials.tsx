@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 const TestimonialsCarousel = () => {
     const [currentIndex, setCurrentIndex] = useState(0);

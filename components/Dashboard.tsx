@@ -1,42 +1,41 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
 import { motion } from "framer-motion";
 import {
     BarChart3,
-    Trophy,
     Brain,
     Building,
-    Plus,
-    Settings,
+    Calendar,
+    CheckCircle,
+    Clock,
+    Code,
+    Crown,
+    Lightbulb,
+    Lock,
     LogOut,
-    Users,
+    Menu,
+    Plus,
+    Search,
+    Settings,
+    Star,
     Target,
     TrendingUp,
-    Star,
-    Clock,
-    Calendar,
-    Code,
-    Filter,
-    Search,
-    Crown,
-    Lock,
-    Zap,
-    Menu,
+    Trophy,
+    Users,
     X,
-    CheckCircle,
-    Lightbulb
+    Zap
 } from "lucide-react";
+import { signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import EnhancedAIInsights from "./AIRecommendations";
-import UpgradeSuccessNotification from "./UpgradeSuccessNotification";
 import InterviewPrep from "./InterviewPrep2";
+import UpgradeSuccessNotification from "./UpgradeSuccessNotification";
 
 // Types
 interface PartyPreview {

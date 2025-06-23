@@ -1,33 +1,28 @@
-import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
-import { 
-    Sparkles, 
-    Timer, 
-    Send, 
-    Crown, 
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    AlertCircle,
     Brain,
-    Code,
-    Clock,
-    MessageCircle,
-    Zap,
-    Target,
+    CheckCircle,
     ChevronDown,
     ChevronUp,
+    Clock,
+    Crown,
     ExternalLink,
-    CheckCircle,
-    XCircle,
-    Users,
-    Play,
-    Pause,
-    RotateCcw,
+    MessageCircle,
+    Send,
+    Sparkles,
+    Target,
     Trophy,
-    AlertCircle
+    Users,
+    XCircle,
+    Zap
 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface Challenge {
     _id: string;

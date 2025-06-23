@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 interface PartyMember {
     displayName: string;

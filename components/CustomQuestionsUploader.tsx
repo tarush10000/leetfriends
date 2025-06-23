@@ -1,17 +1,17 @@
 // components/CustomQuestionsUploader.tsx
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Upload, FileText, Trash2, Eye, Plus, Download } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { motion } from "framer-motion";
+import { Download, FileText, Plus, Trash2, Upload } from "lucide-react";
+import { useState } from "react";
 
 interface CustomQuestion {
     id: string;

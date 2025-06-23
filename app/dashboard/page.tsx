@@ -1,9 +1,9 @@
 // app/dashboard/page.tsx - Enhanced with proper auth flow
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
+import Dashboard from "@/components/Dashboard";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
-import Dashboard from "@/components/Dashboard";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);

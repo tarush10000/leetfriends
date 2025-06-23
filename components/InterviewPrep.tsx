@@ -1,53 +1,45 @@
 "use client";
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-    Building,
-    Search,
-    Filter,
-    CheckCircle,
-    Circle,
-    Clock,
-    TrendingUp,
-    Target,
-    BookOpen,
-    Calendar,
-    BarChart3,
-    ExternalLink,
-    Star,
-    RefreshCw,
-    Download,
-    Eye,
-    EyeOff,
-    Timer,
-    Cpu,
-    Smartphone,
-    Globe,
-    Car,
-    CreditCard,
-    Gamepad2,
-    Music,
-    Video,
-    Briefcase,
-    ShoppingCart,
-    Database,
-    Cloud,
-    Code,
-    Zap,
-    Settings,
-    Users,
-    Layers,
-    Shield,
     Activity,
+    BarChart3,
+    Briefcase,
+    Building,
+    Calendar,
+    Car,
+    CheckCircle,
     ChevronDown,
     ChevronUp,
-    Grid3X3,
-    Archive
+    Circle,
+    Cloud,
+    Code,
+    Cpu,
+    CreditCard,
+    Database,
+    ExternalLink,
+    Eye,
+    EyeOff,
+    Gamepad2,
+    Globe,
+    Layers,
+    Music,
+    RefreshCw,
+    Search,
+    Shield,
+    ShoppingCart,
+    Smartphone,
+    Star,
+    Target,
+    TrendingUp,
+    Users,
+    Video,
+    Zap
 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
 interface InterviewQuestion {
     id: string;

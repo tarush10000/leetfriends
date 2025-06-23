@@ -1,36 +1,27 @@
 // components/PricingPage.tsx - Updated with coupon support
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
-    Check,
-    X,
-    Crown,
-    Star,
-    Users,
-    Brain,
-    Building,
-    Zap,
-    Lock,
-    Unlock,
     ArrowLeft,
-    Sparkles,
-    Target,
-    TrendingUp,
-    Shield,
-    Heart,
+    Check,
     Code2,
-    Tag
+    Crown,
+    Sparkles,
+    Star,
+    Tag,
+    Users,
+    X
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import RazorpayCheckout from "./RazorpayCheckout";
-import CouponInput from "./CouponInput";
 import { toast } from 'sonner';
+import CouponInput from "./CouponInput";
+import RazorpayCheckout from "./RazorpayCheckout";
 
 interface PricingTier {
     id: string;

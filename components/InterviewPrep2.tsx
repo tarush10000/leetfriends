@@ -1,27 +1,36 @@
 // components/InterviewPrep2.tsx - Enhanced with Show Answer functionality
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-    Mic, MicOff, Play, Pause, SkipForward, Volume2, VolumeX,
-    ChevronRight, Trophy, Clock, Target, Brain, Sparkles,
-    CheckCircle, AlertCircle, Download, Share2, X, FileText,
-    Eye, EyeOff, Lightbulb, BookOpen, HelpCircle, BarChart3
-} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    AlertCircle,
+    BarChart3,
+    Brain,
+    CheckCircle,
+    Download,
+    Eye, EyeOff,
+    FileText,
+    Lightbulb,
+    Mic, MicOff, Play, SkipForward,
+    Sparkles,
+    Target,
+    Trophy,
+    X
+} from "lucide-react";
+import { useState } from "react";
 
 interface InterviewPrepProps {
-    onExit?: () => void;
+    // onExit prop is optional and may not be used
 }
 
 interface Question {
@@ -49,7 +58,7 @@ const AVAILABLE_TOPICS = [
     { id: 'networks', label: 'Computer Networks', color: 'bg-orange-500' }
 ];
 
-export default function InterviewPrep({ onExit }: InterviewPrepProps) {
+export default function InterviewPrep(_props: InterviewPrepProps) {
     const [stage, setStage] = useState<'setup' | 'interview' | 'results'>('setup');
     const [settings, setSettings] = useState<InterviewSettings>({
         numberOfQuestions: 5,
@@ -602,9 +611,9 @@ export default function InterviewPrep({ onExit }: InterviewPrepProps) {
                                         <CardContent className="p-4">
                                             <div className="flex items-start space-x-3">
                                                 <div className="flex-shrink-0">
-                                                    {questions[currentQuestionIndex]?.score! >= 70 ? (
+                                                    {(questions[currentQuestionIndex]?.score ?? 0) >= 70 ? (
                                                         <CheckCircle className="w-6 h-6 text-green-400" />
-                                                    ) : questions[currentQuestionIndex]?.score! >= 50 ? (
+                                                    ) : (questions[currentQuestionIndex]?.score ?? 0) >= 50 ? (
                                                         <AlertCircle className="w-6 h-6 text-yellow-400" />
                                                     ) : (
                                                         <X className="w-6 h-6 text-red-400" />
@@ -612,7 +621,7 @@ export default function InterviewPrep({ onExit }: InterviewPrepProps) {
                                                 </div>
                                                 <div className="flex-1">
                                                     <h4 className="text-white font-semibold mb-2">
-                                                        Score: {questions[currentQuestionIndex]?.score}/100
+                                                        Score: {questions[currentQuestionIndex]?.score ?? 0}/100
                                                     </h4>
                                                     <ul className="text-slate-300 text-sm space-y-1">
                                                         {questions[currentQuestionIndex]?.feedback?.map((item, index) => (
