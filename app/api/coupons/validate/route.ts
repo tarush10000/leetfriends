@@ -116,8 +116,8 @@ export async function POST(req: NextRequest) {
 
 function getOriginalAmount(tier: string, billingCycle: string): number {
     const prices = {
-        silver: { monthly: 999, yearly: 9590 },
-        gold: { monthly: 1999, yearly: 19190 }
+        silver: { monthly: 69, yearly: 662.4 },
+        gold: { monthly: 169, yearly: 1622.4 }
     };
 
     return prices[tier as keyof typeof prices]?.[billingCycle as keyof typeof prices.silver] || 0;
