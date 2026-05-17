@@ -51,7 +51,7 @@ export default function PartyCreateForm({ userProfile }: PartyCreateFormProps) {
                 body: JSON.stringify({
                     name: partyName.trim(),
                     password: password || null,
-                    maxMembers: enableMemberLimit ? maxMembers : null,
+                    maxMembers: enableMemberLimit ? maxMembers : 10,
                     // User info is already stored in their profile
                 }),
             });

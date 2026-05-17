@@ -12,16 +12,21 @@ export async function GET() {
     const db = await connectToDatabase();
     const user = await db.collection("users").findOne({ email: session.user.email });
 
-    if (!user?.joinedParties || user.joinedParties.length === 0) {
-        return NextResponse.json([]);
-    }
+    const joinedCodes = Array.isArray(user?.joinedParties) ? user.joinedParties : [];
 
     const parties = await db
         .collection("parties")
-        .find({ code: { $in: user.joinedParties } })
+        .find({
+            $or: [
+                { code: { $in: joinedCodes } },
+                { "members.email": session.user.email }
+            ]
+        })
         .toArray();
 
-    const result = parties.map(p => ({
+    const uniqueParties = Array.from(new Map(parties.map(p => [p.code, p])).values());
+
+    const result = uniqueParties.map(p => ({
         name: p.name,
         code: p.code,
         memberCount: p.members.length,

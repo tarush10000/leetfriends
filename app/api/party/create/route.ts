@@ -3,15 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import { canUserCreateParty, getUserTierLimits } from "@/lib/subscription";
-
-function generatePartyCode(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < 6; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-}
+import { generatePartyCode } from "@/lib/party";
 
 export async function POST(req: NextRequest) {
     try {
@@ -20,7 +12,17 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { name, password, maxMembers = 10 } = await req.json();
+        const requestBody = await req.json();
+        const { name, password } = requestBody;
+        let maxMembers = 10;
+
+        if (typeof requestBody.maxMembers === 'number') {
+            maxMembers = requestBody.maxMembers;
+        } else if (requestBody.maxMembers == null) {
+            maxMembers = 10;
+        } else {
+            maxMembers = Number(requestBody.maxMembers);
+        }
 
         if (!name || name.trim().length === 0) {
             return NextResponse.json({ error: "Party name is required" }, { status: 400 });
@@ -30,7 +32,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Party name too long" }, { status: 400 });
         }
 
-        if (maxMembers < 2 || maxMembers > 50) {
+        if (Number.isNaN(maxMembers) || maxMembers < 2 || maxMembers > 50) {
             return NextResponse.json({ error: "Max members must be between 2 and 50" }, { status: 400 });
         }
 
@@ -95,9 +97,11 @@ export async function POST(req: NextRequest) {
                     email: session.user.email,
                     name: user.name || session.user.name,
                     handle: user.handle,
+                    leetcodeUsername: user.leetcodeUsername || '',
                     displayName: user.displayName || user.handle,
                     joinedAt: new Date(),
                     isOwner: true,
+                    initialStats: user.currentStats || { easy: 0, medium: 0, hard: 0, total: 0 },
                     stats: user.currentStats || { easy: 0, medium: 0, hard: 0, total: 0 }
                 }
             ]
@@ -109,8 +113,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Failed to create party" }, { status: 500 });
         }
 
+        await users.updateOne(
+            { email: session.user.email },
+            {
+                $addToSet: { joinedParties: code },
+                $set: { lastActive: new Date() }
+            }
+        );
+
         return NextResponse.json({
             success: true,
+            partyCode: party.code,
+            partyName: party.name,
             party: {
                 code: party.code,
                 name: party.name,

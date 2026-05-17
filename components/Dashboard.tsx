@@ -679,31 +679,31 @@ export default function Dashboard({ user, userProfile, upgradeSuccess = false, u
                                                 transition={{ delay: index * 0.1 }}
                                             >
                                                 <Card
-                                                    className="bg-slate-700/50 border-slate-600/50 hover:bg-slate-600/50 transition-all duration-200 cursor-pointer"
+                                                    className="bg-gradient-to-br from-slate-900/90 via-slate-950/80 to-slate-900/90 border border-purple-600/10 shadow-2xl shadow-purple-500/5 hover:scale-[1.01] transition-transform duration-200 cursor-pointer"
                                                     onClick={() => router.push(`/party/${party.code}`)}
                                                 >
-                                                    <CardContent className="p-4">
-                                                        <div className="flex items-start justify-between mb-3">
+                                                    <CardContent className="p-5">
+                                                        <div className="flex items-start justify-between mb-4 gap-3">
                                                             <div className="flex-1 min-w-0">
-                                                                <h3 className="font-semibold text-white truncate">
+                                                                <h3 className="font-semibold text-white text-lg truncate">
                                                                     {party.name}
                                                                 </h3>
-                                                                <p className="text-sm text-slate-400">
+                                                                <p className="text-sm text-slate-400 mt-1 truncate">
                                                                     Code: {party.code}
                                                                 </p>
                                                             </div>
                                                             {party.isOwner && (
-                                                                <Badge variant="outline" className="border-purple-500/30 text-purple-400 text-xs">
-                                                                    Owner
+                                                                <Badge variant="outline" className="border-purple-500/30 text-purple-300 text-xs px-2 py-1">
+                                                                    Host
                                                                 </Badge>
                                                             )}
                                                         </div>
-                                                        <div className="flex items-center justify-between text-sm">
-                                                            <span className="text-slate-300 flex items-center">
+                                                        <div className="flex flex-wrap items-center gap-2 text-sm">
+                                                            <span className="inline-flex items-center rounded-full bg-purple-500/10 border border-purple-500/15 px-3 py-1 text-purple-200">
                                                                 <Users className="w-4 h-4 mr-1" />
                                                                 {party.memberCount} members
                                                             </span>
-                                                            <span className="text-slate-400 flex items-center">
+                                                            <span className="inline-flex items-center rounded-full bg-slate-800/80 border border-slate-700/50 px-3 py-1 text-slate-300">
                                                                 <Calendar className="w-4 h-4 mr-1" />
                                                                 {new Date(party.createdAt).toLocaleDateString()}
                                                             </span>

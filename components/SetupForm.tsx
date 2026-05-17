@@ -77,7 +77,7 @@ export default function SetupForm() {
                     leetcodeUsername,
                     partyName,
                     password: password || null,
-                    maxMembers: enableMemberLimit ? maxMembers : null
+                    maxMembers: enableMemberLimit ? maxMembers : 10
                 }
                 : { handle, leetcodeUsername, code: partyCode, password };
 
