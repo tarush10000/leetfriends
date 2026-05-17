@@ -32,6 +32,16 @@ export default async function InterviewPrepPage() {
     const userTier = user.subscription?.tier || 'free';
     const hasInterviewAccess = canUserAccessFeature(userTier, 'interview-prep');
 
+    // Prepare user profile data for the component
+    const userProfile = {
+        email: user.email,
+        leetcodeUsername: user.leetcodeUsername,
+        displayName: user.displayName,
+        // Add any other profile fields that might be needed
+        currentStats: user.currentStats,
+        subscription: user.subscription
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950">
             <SubscriptionGuard
@@ -49,7 +59,10 @@ export default async function InterviewPrepPage() {
                             Practice with AI-generated questions and get real-time feedback
                         </p>
                     </div>
-                    <InterviewPrep userEmail={user.email} />
+                    <InterviewPrep
+                        userEmail={user.email}
+                        userProfile={userProfile}
+                    />
                 </div>
             </SubscriptionGuard>
         </div>

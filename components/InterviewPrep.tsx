@@ -40,6 +40,7 @@ import {
     Zap
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import SyncSolvedProblemsButton from './SyncSolvedProblemsButton';
 
 interface InterviewQuestion {
     id: string;
@@ -92,6 +93,10 @@ interface PaginationData {
 
 interface InterviewPrepProps {
     userEmail: string;
+    userProfile?: {
+        leetcodeUsername?: string;
+        displayName?: string;
+    };
 }
 
 // Lucide icons mapping for companies
@@ -164,7 +169,7 @@ const timeFrameMapping: Record<string, string> = {
     '5. All.csv': 'All Time'
 };
 
-export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
+export default function InterviewPrep({ userEmail, userProfile }: InterviewPrepProps) {
     const [questions, setQuestions] = useState<InterviewQuestion[]>([]);
     const [companies, setCompanies] = useState<CompanyData[]>([]);
     const [stats, setStats] = useState<StatsData | null>(null);
@@ -320,6 +325,11 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
         );
     }
 
+    const handleSyncComplete = (markedCount: number) => {
+        fetchInterviewData(false, true);
+        console.log(`Successfully synced ${markedCount} problems`);
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950 text-white">
             {/* Header */}
@@ -337,6 +347,11 @@ export default function InterviewPrep({ userEmail }: InterviewPrepProps) {
                         </div>
 
                         <div className="flex items-center space-x-4">
+                            <SyncSolvedProblemsButton
+                                leetcodeUsername={userProfile?.leetcodeUsername}
+                                onSyncComplete={handleSyncComplete}
+                                className="mr-2"
+                            />
                             <Button
                                 onClick={() => fetchInterviewData(true)}
                                 disabled={refreshing}

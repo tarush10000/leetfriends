@@ -49,7 +49,7 @@ export default function PartyCreateForm({ userProfile }: PartyCreateFormProps) {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    partyName: partyName.trim(),
+                    name: partyName.trim(),
                     password: password || null,
                     maxMembers: enableMemberLimit ? maxMembers : null,
                     // User info is already stored in their profile
